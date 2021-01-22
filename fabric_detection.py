@@ -48,8 +48,8 @@ def detectLines(img):
         rho = 1  # distance resolution in pixels of the Hough grid
         theta = np.pi / 180  # angular resolution in radians of the Hough grid
         threshold = 15  # minimum number of votes (intersections in Hough grid cell)
-        min_line_length = 70  # minimum number of pixels making up a line
-        max_line_gap = 5  # maximum gap in pixels between connectable line segments
+        min_line_length = 100  # minimum number of pixels making up a line
+        max_line_gap = 10  # maximum gap in pixels between connectable line segments
         line_image = np.copy(gaussian) * 0  # creating a blank to draw lines on
 
         # Run Hough on edge detected image
@@ -65,7 +65,7 @@ def detectLines(img):
 
             #cv2.imshow(name, img)
             #cv2.imshow(name + "_edges", edges)
-            cv2.imwrite(str(kernel_size) + "_gaussian_lines.png", lines_edges)
+            cv2.imshow(str(kernel_size) + "_gaussian_lines.png", lines_edges)
 
     #median = cv2.medianBlur(gray, kernel_size)
     #bilateral = cv2.bilateralFilter(gray, kernel_size, 200, 200)    
@@ -98,7 +98,7 @@ def main():
 
     for img in imgs: 
         (imgc, img_bin) =increaseContrastGetBinary(img)
-        cv2.imwrite("binary.png", img_bin)
+        #cv2.imwrite("binary.png", img_bin)
         detectLines(imgc)
 
 
