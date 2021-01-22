@@ -94,7 +94,7 @@ def main():
     #cv2.namedWindow('contrasted',cv2.WINDOW_NORMAL)
 
     imgs = getImgs('images/fabric_not_present')
-    imgs = getImgs('images/fabric_present')
+    #imgs = getImgs('images/fabric_present')
 
     for img in imgs: 
         (imgc, img_bin) =increaseContrastGetBinary(img)
