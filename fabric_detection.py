@@ -39,33 +39,38 @@ def increaseContrastGetBinary(img):
 
 def detectLines(img):
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    for kernel_size in [17, 19, 21]:
-        gaussian = cv2.GaussianBlur(gray,(kernel_size, kernel_size),0) #GOOD! Reduces noise
-        low_threshold = 50
-        high_threshold = 150
-        edges = cv2.Canny(gaussian, low_threshold, high_threshold)
+    filter = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+    sharpen = cv2.filter2D(gray, -1, filter)
+    cv2.imshow("sharpen", sharpen)
+    cv2.waitKey(0)
 
-        rho = 1  # distance resolution in pixels of the Hough grid
-        theta = np.pi / 180  # angular resolution in radians of the Hough grid
-        threshold = 15  # minimum number of votes (intersections in Hough grid cell)
-        min_line_length = 70  # minimum number of pixels making up a line
-        max_line_gap = 5  # maximum gap in pixels between connectable line segments
-        line_image = np.copy(gaussian) * 0  # creating a blank to draw lines on
+    low_threshold = 50
+    high_threshold = 150
+    edges = cv2.Canny(sharpen, low_threshold, high_threshold)
 
-        # Run Hough on edge detected image
-        # Output "lines" is an array containing endpoints of detected line segments
-        lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]), min_line_length, max_line_gap)
-        if lines is not None:
-            for line in lines:
-                for x1,y1,x2,y2 in line:
-                    cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-            
-            # Draw the lines on the  image
-            lines_edges = cv2.addWeighted(edges, 0.8, line_image, 1, 0)
+    rho = 1  # distance resolution in pixels of the Hough grid
+    theta = np.pi / 180  # angular resolution in radians of the Hough grid
+    threshold = 15  # minimum number of votes (intersections in Hough grid cell)
+    min_line_length = 100  # minimum number of pixels making up a line
+    max_line_gap = 3  # maximum gap in pixels between connectable line segments
+    line_image = np.copy(sharpen) * 0  # creating a blank to draw lines on
 
-            #cv2.imshow(name, img)
-            #cv2.imshow(name + "_edges", edges)
-            cv2.imwrite(str(kernel_size) + "_gaussian_lines.png", lines_edges)
+    # Run Hough on edge detected image
+    # Output "lines" is an array containing endpoints of detected line segments
+    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]), min_line_length, max_line_gap)
+    if lines is not None:
+        for line in lines:
+            for x1,y1,x2,y2 in line:
+                cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+        
+        # Draw the lines on the  image
+        lines_edges = cv2.addWeighted(edges, 0.8, line_image, 1, 0)
+
+        #cv2.imshow(name, img)
+        #cv2.imshow(name + "_edges", edges)
+        cv2.imshow("filter", lines_edges)
+        cv2.waitKey(0)
+
 
     #median = cv2.medianBlur(gray, kernel_size)
     #bilateral = cv2.bilateralFilter(gray, kernel_size, 200, 200)    
@@ -74,10 +79,9 @@ def detectLines(img):
     #cv2.imshow("gray", gray)
     #cv2.imshow("edge image", lines_edges)
     #cv2.imwrite("images/processed/gray.png", gray)
-    #cv2.imwrite("images/processed/gaussian.png", gaussian)
+    #cv2.imwrite("images/processed/sharpen.png", sharpen)
     #cv2.imwrite("images/processed/edges.png", edges)
     
-    cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 def getImgs(parent_folder_path):
@@ -88,25 +92,12 @@ def getImgs(parent_folder_path):
 
 
 def main():
-    #cv2.namedWindow('back',cv2.WINDOW_NORMAL)
-    #cv2.namedWindow('front',cv2.WINDOW_NORMAL)
-    #cv2.namedWindow('original',cv2.WINDOW_NORMAL)
-    #cv2.namedWindow('contrasted',cv2.WINDOW_NORMAL)
-
     imgs = getImgs('images/fabric_not_present')
     imgs = getImgs('images/fabric_present')
 
     for img in imgs: 
         (imgc, img_bin) =increaseContrastGetBinary(img)
-        cv2.imwrite("binary.png", img_bin)
         detectLines(imgc)
-
-
-    
-
-
-    
-
 
 
 if __name__=='__main__':
