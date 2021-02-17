@@ -4,6 +4,8 @@ import os
 from os import listdir
 from os.path import isfile, join
 from matplotlib import pyplot as plt
+from skimage.feature import hog
+from skimage import data, exposure
 
 
 class Image:
@@ -14,12 +16,6 @@ class Image:
 
     def __str__(self):
         return self.fileName
-
-
-def fabricDetection(img):
-    cv2.imshow('image', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
 
 
 def increaseContrast(img):
@@ -51,65 +47,76 @@ def roi(img):
     roi = img[480:1675, 195:1390]
     return
 
-def drawLines(img, low_threshold, high_threshold):
+
+def detectLines(image):
+    img = increaseContrast(image.image)
+
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    cv2.imshow(image.fileName, gray)
+    cv2.waitKey(0)
+
     # for kernel_size in [19, 21]:
     kernel_size = 19
     gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)  # GOOD! Reduces noise
-    #low_threshold = 50
-    #high_threshold = 150
+    low_threshold = 50
+    high_threshold = 150
 
     edges = cv2.Canny(gaussian, low_threshold, high_threshold)
 
     rho = 1  # distance resolution in pixels of the Hough grid
-    theta = np.pi / 180  # angular resolution in radians of the Hough grid
-    threshold = 5  # minimum number of votes (intersections in Hough grid cell)
-    min_line_length = 100  # minimum number of pixels making up a line
-    max_line_gap = 10  # maximum gap in pixels between connectable line segments
+    theta = np.pi / 180  # angular resolution in radians of the Hough grid #####TODO? CHECK IF YOU CAN GO IN A CERTAIN ORIENTATION
+    threshold = 10  # minimum number of votes (intersections in Hough grid cell)
+    min_line_length = 150  # minimum number of pixels making up a line
+    max_line_gap = 15  # maximum gap in pixels between connectable line segments
     line_image = np.copy(gaussian) * 0  # creating a blank to draw lines on
 
     # Run Hough on edge detected image
     # Output "lines" is an array containing endpoints of detected line segments
-    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]), min_line_length, max_line_gap)
+    lines = cv2.HoughLinesP(edges, rho, theta, threshold,
+                            np.array([]), min_line_length, max_line_gap)
+    angles = []
 
+    # BLACK MAGIC BREAKS CODE DO NOT COMBINE
     if lines is not None:
-       for line in lines:
+        for line in lines:
+            for x1, y1, x2, y2 in line:
+                angle = np.rad2deg(np.arctan2(y1 - y2, x1 - x2))
+                print(angle)
+                angles.append(angle)
+    if lines is not None:
+        lines = checkLines(lines, angles)
+        for line in lines:
             for x1, y1, x2, y2 in line:
                 cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 5)
 
     # Draw the lines on the  image
     lines_edges = cv2.addWeighted(edges, 0.8, line_image, 1, 0)
-    return lines_edges, gaussian
+    # edges2= drawLines(img, 75, 125)
+    # edges3= drawLines(img, 100, 150)
 
-def detectLines(image):
-    img = increaseContrast(image.image)
-    edges = drawLines(img, 50, 150)
-    edges2= drawLines(img, 75, 125)
-    edges3= drawLines(img, 100, 150)
-
+    # hist(edges)
+    
     fig = plt.figure()
-    plt.subplot(2, 2, 1),plt.imshow(img,cmap = 'gray')
+    plt.subplot(2, 2, 1), plt.imshow(img, cmap='gray')
     plt.title('edge1'), plt.xticks([]), plt.yticks([])
-    plt.subplot(2, 2, 2),plt.imshow(edges,cmap = 'gray')
+    plt.subplot(2, 2, 2), plt.imshow(edges, cmap='gray')
     plt.title('Edge Image'), plt.xticks([]), plt.yticks([])
-    plt.subplot(2, 2, 3),plt.imshow(edges2,cmap = 'gray')
-    plt.title('Edge2 Image'), plt.xticks([]), plt.yticks([])
-    plt.subplot(2, 2, 4),plt.imshow(edges3,cmap = 'gray')
-    plt.title('Edge3 Image'), plt.xticks([]), plt.yticks([])
-
+    plt.subplot(2, 2, 3), plt.imshow(lines_edges, cmap='gray')
+    plt.title('lines Image'), plt.xticks([]), plt.yticks([])
+    plt.subplot(2, 2, 4), plt.imshow(gray, cmap='gray')
+    plt.title('gray Image'), plt.xticks([]), plt.yticks([])
 
     plt.show()
+    
 
-    #cv2.imshow(image.fileName, image.image)
-    #cv2.imshow('contrasted ' + image.fileName, gray)
-    #cv2.imshow('lines  ' + image.fileName, lines_edges)
+    # cv2.imshow(image.fileName, image.image)
+    # cv2.imshow('contrasted ' + image.fileName, gray)
+    # cv2.imshow('lines  ' + image.fileName, lines_edges)
 
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
-        
-
-    #return lines
+    return lines
 
 
 def getImgs(parent_folder_path):
@@ -123,51 +130,63 @@ def getImgs(parent_folder_path):
 
     return imgs
 
-def checkDark():
-    image = cv2.imread('images/contrast_black.png')
-    img = increaseContrast(image)
-    bitwise = cv2.bitwise_not(img)
-    lines, g1 = drawLines(img, 50, 150)
-    lines2, g2 = drawLines(bitwise, 50, 150)
 
-    fig = plt.figure()
-    plt.subplot(2, 3, 1),plt.imshow(img,cmap = 'gray')
-    plt.title('img'), plt.xticks([]), plt.yticks([])
-    
-    plt.subplot(2, 3, 2),plt.imshow(g1,cmap = 'gray')
-    plt.title('gaussian'), plt.xticks([]), plt.yticks([])
+def checkLines(lines, angles):
+    filteredLines = []
+    i = 0
 
-    plt.subplot(2, 3, 3),plt.imshow(lines,cmap = 'gray')
-    plt.title('Lines Image'), plt.xticks([]), plt.yticks([])
-    
-    plt.subplot(2, 3, 4),plt.imshow(bitwise,cmap = 'gray')
-    plt.title('bitwise not'), plt.xticks([]), plt.yticks([])
-    
-    plt.subplot(2, 3, 5),plt.imshow(g2,cmap = 'gray')
-    plt.title('gaussian'), plt.xticks([]), plt.yticks([])
+    for angle in angles:
+        good_angles = 0
+        for angle2 in angles:
+            if abs(angle2 - angle) < 30:  # 30 DEG THRESHOLD
+                good_angles = good_angles+1
+        if(good_angles/len(angles) > .6 ):  # 60% THRESHOLD
+            filteredLines.append(lines[i])
+        i = i+1
+    print(len(lines))
+    print(len(filteredLines))
+    return filteredLines
 
-    plt.subplot(2, 3, 6),plt.imshow(lines2,cmap = 'gray')
-    plt.title('Lines Image'), plt.xticks([]), plt.yticks([])
 
+def hist(image):
+    fd, hog_image = hog(image, orientations=8, pixels_per_cell=(8, 8),
+                        cells_per_block=(1, 1), visualize=True)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
+
+    ax1.axis('off')
+    ax1.imshow(image, cmap=plt.cm.gray)
+    ax1.set_title('Input image')
+
+    # Rescale histogram for better display
+    hog_image_rescaled = exposure.rescale_intensity(hog_image, in_range=(0, 10))
+
+    ax2.axis('off')
+    ax2.imshow(hog_image_rescaled, cmap=plt.cm.gray)
+    ax2.set_title('Histogram of Oriented Gradients')
     plt.show()
 
 
 def main():
     i = 0
+    imgs = getImgs('images/dark_tests/dblue/outside')
+    # imgs = getImgs('images/fabric_not_present')
+    # imgs = getImgs('images/fabric_present')
 
-    checkDark()
-
-    imgs = getImgs('images/test_images')
-
-    print(len(imgs))
 
     for img in imgs:
         i = i + 1
         lines = detectLines(img)
-        if lines is not None and len(lines > 1):
+        if lines is not None and len(lines) > 5:
+            print(str(i) + ':' + str(len(lines)))
             cv2.imwrite('images/processed/present/' +
                         str(i) + '_' + img.fileName, img.image)
         else:
+            if lines is None:
+                print(str(i) + ':0')
+            else:
+                print(str(i) + ':' + str(len(lines)))
+
             cv2.imwrite('images/processed/not_present/' +
                         str(i) + '_' + img.fileName, img.image)
 
