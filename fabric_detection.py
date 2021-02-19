@@ -55,7 +55,6 @@ def detectLines(image):
     cv2.imshow(image.fileName, gray)
     cv2.waitKey(0)
 
-    # for kernel_size in [19, 21]:
     kernel_size = 19
     gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)  # GOOD! Reduces noise
     low_threshold = 50
@@ -94,7 +93,7 @@ def detectLines(image):
     # edges2= drawLines(img, 75, 125)
     # edges3= drawLines(img, 100, 150)
 
-    # hist(edges)
+    hist(edges)
     
     fig = plt.figure()
     plt.subplot(2, 2, 1), plt.imshow(img, cmap='gray')
@@ -143,15 +142,14 @@ def checkLines(lines, angles):
         if(good_angles/len(angles) > .6 ):  # 60% THRESHOLD
             filteredLines.append(lines[i])
         i = i+1
-    print(len(lines))
-    print(len(filteredLines))
     return filteredLines
 
 
 def hist(image):
     fd, hog_image = hog(image, orientations=8, pixels_per_cell=(8, 8),
                         cells_per_block=(1, 1), visualize=True)
-
+    for e in fd:
+        print(e)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
 
     ax1.axis('off')
@@ -166,29 +164,89 @@ def hist(image):
     ax2.set_title('Histogram of Oriented Gradients')
     plt.show()
 
+def getAvgHist(images):
+    histArr = []
+    for image in images:
+        img = increaseContrast(image.image)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        kernel_size = 19
+        gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)  # GOOD! Reduces noise
+      
+        low_threshold = 50
+        high_threshold = 150
+        edges = cv2.Canny(gaussian, low_threshold, high_threshold)
+        hist, hog_image = hog(edges, orientations=8, pixels_per_cell=(8, 8), cells_per_block=(1, 1), visualize=True)
+        histArr.append(hist)
+        print(hist)
+    sum = [0]
+    avg = []
+    for hist in histArr:
+        pass
+    return avg
+
+def compareHist():
+    np.set_printoptions(threshold=sys.maxsize)
+    img1 = cv2.imread('images/not_present_img.png', 1)
+    img2 = cv2.imread('images/image_10000.png')
+    img1 = img1[195:1390, 480:1675]
+    img2 = img2[195:1390, 480:1675]
+    img1 = increaseContrast(img1)
+    img2 = increaseContrast(img2)
+    gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+    gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+
+    kernel_size = 19
+    gaussian1 = cv2.GaussianBlur(gray1, (kernel_size, kernel_size), 0)
+    gaussian2 = cv2.GaussianBlur(gray2, (kernel_size, kernel_size), 0)
+    
+    low_threshold = 50
+    high_threshold = 150
+    edges1 = cv2.Canny(gaussian1, low_threshold, high_threshold)
+    edges2 = cv2.Canny(gaussian2, low_threshold, high_threshold)
+    hist1 = hog(edges1, orientations=8, pixels_per_cell=(8, 8), cells_per_block=(1, 1))
+    hist2 = hog(edges2, orientations=8, pixels_per_cell=(8, 8), cells_per_block=(1, 1))
+    fo = open("fabric_present_avg_hist.txt", "w+")
+    fo.write(str(hist2))
+    fo = open("fabric_not_present_avg_hist.txt", "w+")
+    fo.write(str(hist1))
+    fo.close()
+
+
 
 def main():
-    i = 0
-    imgs = getImgs('images/dark_tests/dblue/outside')
-    # imgs = getImgs('images/fabric_not_present')
-    # imgs = getImgs('images/fabric_present')
+    compareHist()
+    # i = 0
+    # # imgs = getImgs('images/dark_tests/dblue/outside')
+    # present = getImgs('images/fabric_present')
+    # avgPresentHist = getAvgHist(present)
+    
+    # # notPresent = getImgs('images/fabric_not_present')
+    # # avgNotPresentHist = getAvgHist(notPresent)
+    
+    # print(avgPresentHist)
+    # fo = open("fabric_present_avg_hist.txt", "w+")
+    # fo.write(avgPresentHist)
+    # # fo = open("fabric_not_present_avg_hist.txt", "w+")
+    # # fo.write(avgNotPresentHist)
+    # fo.close()
+    
+    
+    # for img in imgs:
+    #     i = i + 1
+    #     lines = detectLines(img)
+        # if lines is not None and len(lines) > 5:
+        #     print(str(i) + ':' + str(len(lines)))
+        #     cv2.imwrite('images/processed/present/' +
+        #                 str(i) + '_' + img.fileName, img.image)
+        # else:
+        #     if lines is None:
+        #         print(str(i) + ':0')
+        #     else:
+        #         print(str(i) + ':' + str(len(lines)))
 
-
-    for img in imgs:
-        i = i + 1
-        lines = detectLines(img)
-        if lines is not None and len(lines) > 5:
-            print(str(i) + ':' + str(len(lines)))
-            cv2.imwrite('images/processed/present/' +
-                        str(i) + '_' + img.fileName, img.image)
-        else:
-            if lines is None:
-                print(str(i) + ':0')
-            else:
-                print(str(i) + ':' + str(len(lines)))
-
-            cv2.imwrite('images/processed/not_present/' +
-                        str(i) + '_' + img.fileName, img.image)
+        #     cv2.imwrite('images/processed/not_present/' +
+        #                 str(i) + '_' + img.fileName, img.image)
 
 
 if __name__ == '__main__':
