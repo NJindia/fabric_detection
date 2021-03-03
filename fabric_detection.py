@@ -169,7 +169,7 @@ def hist(image):
 
 def main():
     i = 0
-    imgs = getImgs('images/dark_tests/dblue/outside')
+    imgs = getImgs('images/darks')
     # imgs = getImgs('images/fabric_not_present')
     # imgs = getImgs('images/fabric_present')
 
