@@ -50,42 +50,64 @@ def getImgs(parent_folder_path):
     for f in listdir(parent_folder_path):
         if isfile(join(parent_folder_path, f)):
             path = join(parent_folder_path, f)
-            img = cv2.imread(path, 1)
+            img = cv2.imread(path)
             imgs.append(Image(img , f, path))
 
     return imgs
 
 def getHOG(img):
-    hist = hog(img, orientations=36, pixels_per_cell=(50, 50), cells_per_block=(1, 1))
+    hist, vis= hog(img, orientations=360, pixels_per_cell=(25, 25), cells_per_block=(2, 2 ), visualize=True)
+    cv2.imshow('hog', vis)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    return hist
+
+def getsHOG(img):
+    winSize = (64,64)
+    blockSize = (16,16)
+    blockStride = (8,8)
+    cellSize = (8,8)
+    nbins = 9
+    derivAperture = 1
+    winSigma = 4.
+    histogramNormType = 0
+    L2HysThreshold = 2.0000000000000001e-01
+    gammaCorrection = 0
+    nlevels = 64
+    hog = cv2.HOGDescriptor(winSize,blockSize,blockStride,cellSize,nbins,derivAperture,winSigma,
+                            histogramNormType,L2HysThreshold,gammaCorrection,nlevels)
+    #compute(img[, winStride[, padding[, locations]]]) -> descriptors
+    winStride = (8,8)
+    padding = (8,8)
+    locations = ((10,20),)
+    hist = hog.compute(img,winStride,padding,locations)
+    print(len(hist))
     return hist
 
 def roi(img):
-    return img[1000:1050, 1200:1250]
+    return img[1000:1100, 1200:1300]
 
-def getAvgHist(images):
+def getAvgHist(images, csvName):
     histArr = []
     csvArr = []
     for image in images:
         img = roi(image.image)
-        l = getLChannel(img)
-        cv2.imwrite('images/smol/' + image.fileName, l)
-        hist = getHOG(l)
-        np.savetxt(image.fileName + '.csv', hist, fmt='%s', delimiter=',', header="value")
+        # img = getLChannel(img)
+        img = getSVChannels(img)
+        cv2.imwrite('images/smol/' + image.fileName, img)
+        hist = getHOG(img)
         histArr.append(hist)
         csvArr = np.append(csvArr, np.full(len(hist), image.fileName), axis=0)
-        print(len(hist))
     flatArr = [elem for hist in histArr for elem in hist]
-    print(flatArr)
     arr = (csvArr, flatArr)
     arr = np.transpose(arr)
-    np.savetxt('imgs.csv', arr, fmt='%s', delimiter=',', header="hist, value")
+    np.savetxt(csvName, arr, fmt='%s', delimiter=',', header="hist, value")
     sum = np.full(len(histArr[0]), 0)
     avg = []
     for hist in histArr:
         sum = sum + hist
     avg = sum / len(histArr)
     return avg
-
 
 def getIntersection(hist_1, hist_2):
         """
@@ -103,63 +125,50 @@ def getKStest(hist1, hist2):
     kStat, p = ks_2samp(hist1, hist2)
     return kStat, p
         
+def getSVChannels(img):
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+    h[:,: ] =  360 
+    hsvNew = cv2.merge((h, s, v))
+
+    final = cv2.cvtColor(hsvNew, cv2.COLOR_HSV2BGR)
+    # final = cv2.cvtColor(final, cv2.COLOR_BGR2GRAY)
+    # cv2.imshow('final', final)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+    return final
+
 def getLChannel(img):
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
     return l
 
-def compareHist(img1, avgHist):
-    fileName = img1.fileName + '.csv'
-    img1 = img1.image
-    # img2 = img2.image
-    np.set_printoptions(threshold=sys.maxsize)
-    img1 = roi(img1)
-    img2 = roi(img2)
-    l1= getLChannel(img1)
-    l2= getLChannel(img2)
-
-    cv2.imwrite('images/smol/present.png', img1)
-    cv2.imwrite('images/smol/not_present.png', img2)
-    hist1, imgH = getHOG(l1)
-    hist2, imgH2 = getHOG(l2)
-    cv2.imshow('imgH', imgH)
-    cv2.imshow('imgH2', imgH2)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()    
-    hists = np.append(hist1, hist2)
-    catArr = np.append(np.full(len(hist1), 'Present L'), np.full(len(hist2), 'Not Present L'))
-    arr = (catArr, hists)
-    arr = np.transpose(arr)
-    np.savetxt(fileName, arr, fmt='%s', delimiter=',', header="hist, value")
-
-    # bhattacharyya(hist1, hist2, bins)
-    # intersection = getIntersection(hist1, hist2)
-    kStat, p = getKStest(hist1, hist2)
-
-    return kStat, p
-
+def compareHist(img, avgHist):
+    fileName = img.fileName + '.csv'
+    img = img.image
+    img = roi(img)
+    # img = getLChannel(img)
+    img = getSVChannels(img)
+    hist = getHOG(img)
+    intersection = getIntersection(hist, avgHist)
+    return intersection
 
 def main():
     i = 0
     # imgs = getImgs('images/dark_tests/dblue/outside')
-    # present = getImgs('images/darks')
+    present = getImgs('images/darks')
     notPresent = getImgs('images/fabric_not_present')
+    avgPresentHist = getAvgHist(present, 'presentImgs.csv')
+    avgNotPresentHist = getAvgHist(notPresent, 'notPresentImgs.csv')
+    np.savetxt('avgPresentHist.csv', avgPresentHist, fmt='%s', delimiter=',', header="value")
+    np.savetxt('avgNotPresentHist.csv', avgNotPresentHist, fmt='%s', delimiter=',', header="value")    
+    print("present")
+    for img in present:
+        print(compareHist(img, avgPresentHist))
+    print("not present")
+    for img in notPresent:
+        print(compareHist(img, avgPresentHist))
 
-    avgPresentHist = getAvgHist(notPresent)
-    np.savetxt('avgHist.csv', avgPresentHist, fmt='%s', delimiter=',', header="value")
-    print('checkpoint')
-    
-    # # refPic = cv2.imread('images/fabric_not_present/destacker_back_20201112_163305_WO0176_7377-BP_Inside.png', 1)
-    # refPic = cv2.imread('images/darks/db_10000.png', 1)
-    # # darkPic = cv2.imread('images/dark_contrast.png', 1)
-    # notPresent = getImgs('images/fabric_not_present')
-    # # avgNotPresentHist = getAvgHist(notPresent)
-    
-    # print("present")
-    # for img in present:
-    #     print(compareHist(img, refPic))
-    # print("not present")
-    # for img in notPresent:
-    #     print(compareHist(img, refPic))
+
 if __name__ == '__main__':
     main()
