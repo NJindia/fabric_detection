@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from skimage.feature import hog
 from skimage import data, exposure
 from scipy.stats import ks_2samp
+from sklearn import svm
 
 class Image:
     def __init__(self, img, fileName, path):
@@ -17,7 +18,6 @@ class Image:
 
     def __str__(self):
         return self.fileName
-
 
 def increaseContrast(img):
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -44,48 +44,65 @@ def increaseContrast(img):
 
     return final
 
-
 def getImgs(parent_folder_path):
     imgs = []
     for f in listdir(parent_folder_path):
         if isfile(join(parent_folder_path, f)):
             path = join(parent_folder_path, f)
             img = cv2.imread(path)
-            imgs.append(Image(img , f, path))
-
+            temp = splitImg(img)
+            [imgs.append(i) for i in temp]
     return imgs
+
+
+# def getImgs(parent_folder_path):
+#     imgs = []
+#     for f in listdir(parent_folder_path):
+#         if isfile(join(parent_folder_path, f)):
+#             path = join(parent_folder_path, f)
+#             img = cv2.imread(path)
+#             imgs.append(Image(img , f, path))
+#     return imgs
+
+def getSVM_CLF(present, notPresent):
+    X = []
+    y = []
+    for img in present:
+        X.append(rawImgToHist(img))
+        y.append(1)
+    for img in notPresent:
+        X.append(rawImgToHist(img))
+        y.append(0)
+    # np.savetxt(csvName, arr, fmt='%s', delimiter=',', header="hist, value")
+    clf = svm.SVC()
+    clf.fit(X, y)
+    return clf
+
+def rawImgToHist(img):
+    # img = getLChannel(img)
+    img = getSVChannels(img)
+    hist = getHOG(img)
+    return hist
 
 def getHOG(img):
     hist, vis= hog(img, orientations=360, pixels_per_cell=(25, 25), cells_per_block=(2, 2 ), visualize=True)
-    cv2.imshow('hog', vis)
+    # cv2.imshow('hog', vis)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     return hist
 
-def getsHOG(img):
-    winSize = (64,64)
-    blockSize = (16,16)
-    blockStride = (8,8)
-    cellSize = (8,8)
-    nbins = 9
-    derivAperture = 1
-    winSigma = 4.
-    histogramNormType = 0
-    L2HysThreshold = 2.0000000000000001e-01
-    gammaCorrection = 0
-    nlevels = 64
-    hog = cv2.HOGDescriptor(winSize,blockSize,blockStride,cellSize,nbins,derivAperture,winSigma,
-                            histogramNormType,L2HysThreshold,gammaCorrection,nlevels)
-    #compute(img[, winStride[, padding[, locations]]]) -> descriptors
-    winStride = (8,8)
-    padding = (8,8)
-    locations = ((10,20),)
-    hist = hog.compute(img,winStride,padding,locations)
-    print(len(hist))
-    return hist
-
 def roi(img):
     return img[1000:1100, 1200:1300]
+
+def splitImg(img):
+    imgs = []
+    i = 400
+    j = 200
+    while i <= 1600 and j <=1400:
+        imgs.append(img[i:i+100, j:j+100])
+        i = i  + 100
+        j = j + 100
+    return imgs
 
 def getAvgHist(images, csvName):
     histArr = []
@@ -107,7 +124,7 @@ def getAvgHist(images, csvName):
     for hist in histArr:
         sum = sum + hist
     avg = sum / len(histArr)
-    return avg
+    return avg, histArr
 
 def getIntersection(hist_1, hist_2):
         """
@@ -153,21 +170,41 @@ def compareHist(img, avgHist):
     intersection = getIntersection(hist, avgHist)
     return intersection
 
+def predictPresence(clf, img):
+    sum = 0
+    imgParts = splitImg(img)
+    for i in imgParts:
+        hist = rawImgToHist(i)
+        p = clf.predict(hist)
+        print(p)
+        if(p==1):
+            sum += 1
+    pred = sum/len(imgParts)
+    thresh = (len*len)/2 #if 1/2 of results are each, this is the avg
+    if(pred > thresh):
+        return 1
+    else:
+        return 0
+
 def main():
     i = 0
     # imgs = getImgs('images/dark_tests/dblue/outside')
+    presImg = cv2.imread('images/SVM_test/present.png')
+    notPresImg = cv2.imread('images/SVM_test/no_shirt3.png')
     present = getImgs('images/darks')
     notPresent = getImgs('images/fabric_not_present')
-    avgPresentHist = getAvgHist(present, 'presentImgs.csv')
-    avgNotPresentHist = getAvgHist(notPresent, 'notPresentImgs.csv')
-    np.savetxt('avgPresentHist.csv', avgPresentHist, fmt='%s', delimiter=',', header="value")
-    np.savetxt('avgNotPresentHist.csv', avgNotPresentHist, fmt='%s', delimiter=',', header="value")    
+    # avgPresentHist, presHists = getAvgHist(present, 'presentImgs.csv')
+    # avgNotPresentHist, notPresHists = getAvgHist(notPresent, 'notPresentImgs.csv')
+    clf = getSVM_CLF(present, notPresent)
+    # np.savetxt('avgPresentHist.csv', avgPresentHist, fmt='%s', delimiter=',', header="value")
+    # np.savetxt('avgNotPresentHist.csv', avgNotPresentHist, fmt='%s', delimiter=',', header="value")    
     print("present")
-    for img in present:
-        print(compareHist(img, avgPresentHist))
+    predictPresence(clf, presImg)
     print("not present")
-    for img in notPresent:
-        print(compareHist(img, avgPresentHist))
+    predictPresence(clf, notPresImg)
+
+
+
 
 
 if __name__ == '__main__':
