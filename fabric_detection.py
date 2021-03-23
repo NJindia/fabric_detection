@@ -85,7 +85,7 @@ def rawImgToHist(img):
     return hist
 
 def getHOG(img):
-    hist, vis= hog(img, orientations=360, pixels_per_cell=(25, 25), cells_per_block=(2, 2 ), visualize=True)
+    hist, vis= hog(img, orientations=36, pixels_per_cell=(25, 25), cells_per_block=(2, 2), visualize=True)
     # cv2.imshow('hog', vis)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -96,12 +96,16 @@ def roi(img):
 
 def splitImg(img):
     imgs = []
-    i = 400
-    j = 200
-    while i <= 1600 and j <=1400:
-        imgs.append(img[i:i+100, j:j+100])
-        i = i  + 100
-        j = j + 100
+    y = 200
+    x = 500
+    while y <= 1300:
+        while x <=1600:
+            im = img[y:y+100, x:x+100]
+            imgs.append(im)
+            x = x + 100
+        y = y  + 100
+        x=500
+
     return imgs
 
 def getAvgHist(images, csvName):
@@ -175,13 +179,13 @@ def predictPresence(clf, img):
     imgParts = splitImg(img)
     for i in imgParts:
         hist = rawImgToHist(i)
+        hist = hist.reshape(1, -1)
         p = clf.predict(hist)
         print(p)
         if(p==1):
             sum += 1
     pred = sum/len(imgParts)
-    thresh = (len*len)/2 #if 1/2 of results are each, this is the avg
-    if(pred > thresh):
+    if(pred > 0.5):
         return 1
     else:
         return 0
@@ -193,15 +197,17 @@ def main():
     notPresImg = cv2.imread('images/SVM_test/no_shirt3.png')
     present = getImgs('images/darks')
     notPresent = getImgs('images/fabric_not_present')
-    # avgPresentHist, presHists = getAvgHist(present, 'presentImgs.csv')
-    # avgNotPresentHist, notPresHists = getAvgHist(notPresent, 'notPresentImgs.csv')
     clf = getSVM_CLF(present, notPresent)
     # np.savetxt('avgPresentHist.csv', avgPresentHist, fmt='%s', delimiter=',', header="value")
     # np.savetxt('avgNotPresentHist.csv', avgNotPresentHist, fmt='%s', delimiter=',', header="value")    
     print("present")
-    predictPresence(clf, presImg)
+    presPrediction = predictPresence(clf, presImg)
     print("not present")
-    predictPresence(clf, notPresImg)
+    notPresPrediction = predictPresence(clf, notPresImg)
+
+    print('present prediction: ' + str(presPrediction))
+    print('not present prediction: ' + str(notPresPrediction))
+    
 
 
 
