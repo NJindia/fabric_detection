@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import sys
+import random
 from os import listdir
 from os.path import isfile, join
 from matplotlib import pyplot as plt
@@ -55,22 +56,6 @@ def getImages(parent_folder_path):
             split = splitImg(img)
             imgs.append(Image(img, f, path, split))
     return imgs
-
-def getSVM_CLF(present, notPresent):
-    X = []
-    y = []
-    for image in present:
-        for img in image.split:
-            X.append(rawImgToHist(img))
-            y.append(1)
-    for image in notPresent:
-        for img in image.split:
-            X.append(rawImgToHist(img))
-            y.append(0)
-    # np.savetxt(csvName, arr, fmt='%s', delimiter=',', header="hist, value")
-    clf = svm.SVC()
-    clf.fit(X, y)
-    return clf
 
 def rawImgToHist(img):
     # img = getLChannel(img)
@@ -135,17 +120,62 @@ def predictPresence(clf, img):
     else:
         return 0
 
-def makeCLF():
+def kFold(images, k):
+    testLen = int(len(images)/k)
+    folds = []
+    while(len(images)>=testLen):
+        fold = []
+        for i in range(0, testLen):
+            index = random.randint(0, len(images) - 1)
+            fold.append(images.pop(index))
+        folds.append(fold)
+    folds.append(images)
+    return folds
+
+def makeCLF(foldNum):
     start = datetime.now()
-    present = getImages('images/darks')
-    notPresent = getImages('images/fabric_not_present')
+    present = getImages('images/SVM_training_present')
+    notPresent = getImages('images/SVM_training_not_present')
     getImgsTime = datetime.now()
     print('get Images time: ' + str(getImgsTime - start))
-    clf = getSVM_CLF(present, notPresent)
+    
+    #KFOLD
+    allImgs = present + notPresent
+    folds = kFold(allImgs, 10)
+    testImgs = folds.pop(foldNum)
+    trainImgs = [img for fold in folds for img in fold]
+    X = []
+    y = []
+    for image in trainImgs:
+        if 'SVM_training_present' in image.path:
+            for img in image.split:
+                X.append(rawImgToHist(img))
+                y.append(1)
+        else:
+            for img in image.split:
+                X.append(rawImgToHist(img))
+                y.append(0)
+    
+    #KFOLD
+
+    # X = []
+    # y = []
+    # for image in present:
+    #     for img in image.split:
+    #         X.append(rawImgToHist(img))
+    #         y.append(1)
+    # for image in notPresent:
+    #     for img in image.split:
+    #         X.append(rawImgToHist(img))
+    #         y.append(0)
+    
+    clf = svm.SVC()
+    clf.fit(X, y)
+    return clf, folds
     getCLFTime = datetime.now()
     print('get CLF time: ' + str(getCLFTime - getImgsTime))
     dump(clf, 'clf.pk1')
-    return clf
+    return clf, testImgs #MAKE ONLY RETURN CLF
 
 def readCLF():
     start = datetime.now()
@@ -156,23 +186,27 @@ def readCLF():
     return clf
 
 def main():
-    presImgs = getImages('images/SVM_test_present')
-    notPresImgs = getImages('images/SVM_test_not_present')
-    newCLF = True
-    if newCLF:
-        clf = makeCLF()
-    else: 
-        clf = readCLF()
-    # np.savetxt('avgPresentHist.csv', avgPresentHist, fmt='%s', delimiter=',', header="value")
-    # np.savetxt('avgNotPresentHist.csv', avgNotPresentHist, fmt='%s', delimiter=',', header="value")    
-    print("present")
-    for presImg in presImgs:
-        presPrediction = predictPresence(clf, presImg)
-        print(presImg.fileName + ' present prediction: ' + str(presPrediction))
-    print("not present")
-    for notPresImg in notPresImgs:
-        notPresPrediction = predictPresence(clf, notPresImg)
-        print(notPresImg.fileName + ' not present prediction: ' + str(notPresPrediction))
-    
+    for i in range(0, 10):
+    # presImgs = getImages('images/SVM_test_present')
+    # notPresImgs = getImages('images/SVM_test_not_present')
+
+    # newCLF = True
+    # if newCLF:
+    #     clf = makeCLF(notPresTrain)
+    # else: 
+    #     clf = readCLF()
+        clf, testImgs = makeCLF(i)
+    # print("present")
+    # for presImg in presImgs:
+    #     presPrediction = predictPresence(clf, presImg)
+    #     print(presImg.fileName + ' present prediction: ' + str(presPrediction))
+    # print("not present")
+    # for notPresImg in testImgs:
+    #     notPresPrediction = predictPresence(clf, notPresImg)
+    #     print(notPresImg.fileName + ' not present prediction: ' + str(notPresPrediction))
+        for testImg in testImgs:
+            presPrediction = predictPresence(clf, testImg)
+            print(testImg.fileName + 'prediction: ' + str(presPrediction))
+        
 if __name__ == '__main__':
     main()
