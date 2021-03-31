@@ -7,16 +7,17 @@ from os.path import isfile, join
 from matplotlib import pyplot as plt
 from skimage.feature import hog
 from skimage import data, exposure
+from scipy.ndimage import rotate
 from sklearn import svm
 from joblib import load, dump
 from datetime import datetime
 
 class Image:
-    def __init__(self, img=None, fileName=None, path=None, split=None):
+    def __init__(self, img=None, fileName=None, path=None, roi=None):
         self.image = img
         self.fileName = fileName
         self.path = path
-        self.split = split
+        self.roi = roi
 
     def __str__(self):
         return self.fileName
@@ -52,8 +53,8 @@ def getImages(parent_folder_path):
         if isfile(join(parent_folder_path, f)):
             path = join(parent_folder_path, f)
             img = cv2.imread(path)
-            split = splitImg(img)
-            imgs.append(Image(img, f, path, split))
+            roi = img[0:1544,400:1944]
+            imgs.append(Image(img=img, fileName=f, path=path))
     return imgs
 
 def rawImgToHist(img):
@@ -69,22 +70,42 @@ def getHOG(img):
     cv2.destroyAllWindows()
     return hist
 
-def roi(img):
-    return img[1000:1100, 1200:1300]
+def getROI(img):
+    center = (int(img.shape[1]/2), int(img.shape[0]/2)) #(x, y)
+    x1 = center[0]-500
+    x2 = center[0]+500
+    y1 = center[1]-500
+    y2 = center[1]+500
+    # cv2.line(img, (x1, y1), (x2, y1), 1, 5)
+    # cv2.line(img, (x1, y1), (x1, y2), 1, 5)
+    # cv2.line(img, (x2, y1), (x2, y2), 1, 5)
+    # cv2.line(img, (x1, y2), (x2, y2), 1, 5)
+    return img[y1:y2,x1:x2]
 
 def splitImg(img):
     imgs = []
-    y = 200
-    x = 500
-    while y <= 1300:
-        while x <=1600:
+    shape = img.shape #(y, x)
+    y = 0
+    x = 0
+    while y < shape[0]:
+        while x < shape[1]:
             im = img[y:y+100, x:x+100]
             imgs.append(im)
             x = x + 100
-        y = y  + 100
-        x=500
-
+        y = y + 100
+        x=0
     return imgs
+
+def getRotations(img):
+    rotations = []
+    for i in range(0, 360, 15):
+        print(i)
+        rotation = rotate(img, i)
+        print(i)
+        
+        roi = getROI(rotation)
+        rotations.append(rotation)
+    return rotations
       
 def getSVChannels(img):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -123,19 +144,25 @@ def getSVM_CLF(present, notPresent):
     X = []
     y = []
     for image in present:
-        for img in image.split:
-            X.append(rawImgToHist(img))
-            y.append(1)
+        rotations = getRotations(image.image)
+        for rotation in rotations:
+            split = splitImg(rotation)
+            for img in split:
+                X.append(rawImgToHist(img))
+                y.append(1)
     for image in notPresent:
-        for img in image.split:
-            X.append(rawImgToHist(img))
-            y.append(0)
+        for rotation in image.rotations:
+            split = splitImg(rotation)
+            for img in split:
+                X.append(rawImgToHist(img))
+                y.append(0)
     clf = svm.SVC()
     clf.fit(X, y)
     return clf
 
 def makeCLF():
     start = datetime.now()
+    print('start')
     present = getImages('images/SVM_training_present')
     notPresent = getImages('images/SVM_training_not_present')
     getImgsTime = datetime.now()
