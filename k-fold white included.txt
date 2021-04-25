@@ -1,0 +1,245 @@
+get CLF time: 0:13:20.650456
+present
+avg = 1.0
+destacker_back_20201118_155513_WO0178_7485-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_155836_WO0178_7486-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_160839_WO0178_7487-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_160909_WO0178_7488-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_160940_WO0178_7489-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_161011_WO0178_7490-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_161042_WO0178_7491-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_161117_WO0178_7492-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_162011_WO0178_7493-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_162149_WO0178_7494-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_162220_WO0178_7495-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_162251_WO0178_7496-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_162322_WO0178_7497-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_162353_WO0178_7498-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_162424_WO0178_7499-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_162516_WO0178_7500-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_162607_WO0178_7501-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_163141_WO0178_7502-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_163754_WO0178_7503-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_163825_WO0178_7504-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_163931_WO0178_7505-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164022_WO0178_7506-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164112_WO0178_7507-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164211_WO0178_7508-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164301_WO0178_7509-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164400_WO0178_7510-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164450_WO0178_7511-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164540_WO0178_7512-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164629_WO0178_7513-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164716_WO0178_7514-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164804_WO0178_7515-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164854_WO0178_7516-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_164951_WO0178_7517-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165039_WO0178_7518-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165127_WO0178_7519-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165216_WO0178_7520-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165304_WO0178_7521-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165355_WO0178_7522-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165441_WO0178_7523-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165530_WO0178_7524-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165618_WO0178_7525-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165710_WO0178_7526-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165758_WO0178_7527-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165848_WO0178_7528-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_165941_WO0178_7529-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_170035_WO0178_7530-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_170133_WO0178_7531-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_170232_WO0178_7532-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_170322_WO0178_7533-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_back_20201118_170412_WO0178_7534-BP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_155514_WO0178_7485-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_155837_WO0178_7486-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_160840_WO0178_7487-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_160910_WO0178_7488-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_160941_WO0178_7489-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_161012_WO0178_7490-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_161043_WO0178_7491-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_161117_WO0178_7492-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_162012_WO0178_7493-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_162150_WO0178_7494-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_162221_WO0178_7495-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_162252_WO0178_7496-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_162323_WO0178_7497-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_162354_WO0178_7498-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_162425_WO0178_7499-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_162517_WO0178_7500-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_162607_WO0178_7501-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_163142_WO0178_7502-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_163755_WO0178_7503-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_163826_WO0178_7504-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_163932_WO0178_7505-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164022_WO0178_7506-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164113_WO0178_7507-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164212_WO0178_7508-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164302_WO0178_7509-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164401_WO0178_7510-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164451_WO0178_7511-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164540_WO0178_7512-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164630_WO0178_7513-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164717_WO0178_7514-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164805_WO0178_7515-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164855_WO0178_7516-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_164952_WO0178_7517-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165040_WO0178_7518-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165128_WO0178_7519-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165217_WO0178_7520-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165305_WO0178_7521-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165356_WO0178_7522-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165442_WO0178_7523-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165530_WO0178_7524-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165619_WO0178_7525-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165711_WO0178_7526-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165759_WO0178_7527-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165849_WO0178_7528-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_165942_WO0178_7529-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_170035_WO0178_7530-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_170134_WO0178_7531-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_170233_WO0178_7532-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_170320_WO0178_7533-FP_Outside.png present prediction: 1
+avg = 1.0
+destacker_front_20201118_170412_WO0178_7534-FP_Outside.png present prediction: 1
+
+
+
+WITH WHITE:
+get CLF time: 0:21:24.441351
+present
+avg = 0.96
+black (1).png present prediction: 1
+avg = 0.99
+black (10).png present prediction: 1
+avg = 0.1
+black (2).png present prediction: 0
+avg = 0.14
+black (3).png present prediction: 0
+avg = 0.09
+black (4).png present prediction: 0
+avg = 0.12
+black (5).png present prediction: 0
+avg = 0.2
+black (6).png present prediction: 0
+avg = 0.97
+black (7).png present prediction: 1
+avg = 0.96
+black (8).png present prediction: 1
+avg = 0.99
+black (9).png present prediction: 1
+not present
+avg = 0.0
+not_present (49).png not present prediction: 0
+avg = 0.0
+not_present (50).png not present prediction: 0
+avg = 0.0
+not_present (51).png not present prediction: 0
+avg = 0.0
+not_present (52).png not present prediction: 0
+avg = 0.0
+not_present (53).png not present prediction: 0
+avg = 0.0
+not_present (54).png not present prediction: 0
+avg = 0.0
+not_present (55).png not present prediction: 0
+avg = 0.0
+not_present (56).png not present prediction: 0

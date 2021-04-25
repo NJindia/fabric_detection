@@ -1,0 +1,381 @@
+get Images time: 0:00:06.675233
+336000
+get CLF time: 0:12:49.088479
+present
+avg = 1.0
+white (1).png present prediction: 1
+avg = 1.0
+white (10).png present prediction: 1
+avg = 1.0
+white (2).png present prediction: 1
+avg = 1.0
+white (3).png present prediction: 1
+avg = 1.0
+white (4).png present prediction: 1
+avg = 1.0
+white (5).png present prediction: 1
+avg = 1.0
+white (6).png present prediction: 1
+avg = 1.0
+white (7).png present prediction: 1
+avg = 1.0
+white (8).png present prediction: 1
+avg = 1.0
+white (9).png present prediction: 1
+not present
+avg = 0.0
+not_present (1).png not present prediction: 0
+avg = 0.0
+not_present (2).png not present prediction: 0
+avg = 0.0
+not_present (3).png not present prediction: 0
+avg = 0.0
+not_present (4).png not present prediction: 0
+avg = 0.0
+not_present (5).png not present prediction: 0
+avg = 0.0
+not_present (6).png not present prediction: 0
+
+get Images time: 0:00:06.637201
+336000
+get CLF time: 0:12:39.248028
+present
+avg = 1.0
+white (11).png present prediction: 1
+avg = 1.0
+white (12).png present prediction: 1
+avg = 1.0
+white (13).png present prediction: 1
+avg = 1.0
+white (14).png present prediction: 1
+avg = 1.0
+white (15).png present prediction: 1
+avg = 1.0
+white (16).png present prediction: 1
+avg = 1.0
+white (17).png present prediction: 1
+avg = 1.0
+white (18).png present prediction: 1
+avg = 1.0
+white (19).png present prediction: 1
+avg = 1.0
+white (20).png present prediction: 1
+not present
+avg = 0.0
+not_present (10).png not present prediction: 0
+avg = 0.0
+not_present (11).png not present prediction: 0
+avg = 0.0
+not_present (12).png not present prediction: 0
+avg = 0.0
+not_present (7).png not present prediction: 0
+avg = 0.0
+not_present (8).png not present prediction: 0
+avg = 0.0
+not_present (9).png not present prediction: 0
+
+get Images time: 0:00:07.358318
+336000
+get CLF time: 0:13:07.432733
+present
+avg = 1.0
+white (21).png present prediction: 1
+avg = 1.0
+white (22).png present prediction: 1
+avg = 1.0
+white (23).png present prediction: 1
+avg = 1.0
+white (24).png present prediction: 1
+avg = 1.0
+white (25).png present prediction: 1
+avg = 1.0
+white (26).png present prediction: 1
+avg = 1.0
+white (27).png present prediction: 1
+avg = 1.0
+white (28).png present prediction: 1
+avg = 1.0
+white (29).png present prediction: 1
+avg = 1.0
+white (30).png present prediction: 1
+not present
+avg = 0.0
+not_present (13).png not present prediction: 0
+avg = 0.0
+not_present (14).png not present prediction: 0
+avg = 0.0
+not_present (15).png not present prediction: 0
+avg = 0.0
+not_present (16).png not present prediction: 0
+avg = 0.0
+not_present (17).png not present prediction: 0
+avg = 0.0
+not_present (18).png not present prediction: 0
+
+get Images time: 0:00:06.091733
+336000
+get CLF time: 0:11:40.608669
+present
+avg = 1.0
+white (31).png present prediction: 1
+avg = 1.0
+white (32).png present prediction: 1
+avg = 1.0
+white (33).png present prediction: 1
+avg = 1.0
+white (34).png present prediction: 1
+avg = 1.0
+white (35).png present prediction: 1
+avg = 1.0
+white (36).png present prediction: 1
+avg = 1.0
+white (37).png present prediction: 1
+avg = 1.0
+white (38).png present prediction: 1
+avg = 1.0
+white (39).png present prediction: 1
+avg = 1.0
+white (40).png present prediction: 1
+not present
+avg = 0.0
+not_present (19).png not present prediction: 0
+avg = 0.0
+not_present (20).png not present prediction: 0
+avg = 0.0
+not_present (21).png not present prediction: 0
+avg = 0.0
+not_present (22).png not present prediction: 0
+avg = 0.0
+not_present (23).png not present prediction: 0
+avg = 0.0
+not_present (24).png not present prediction: 0
+
+get Images time: 0:00:06.386488
+336000
+get CLF time: 0:11:39.944096
+present
+avg = 1.0
+white (41).png present prediction: 1
+avg = 1.0
+white (42).png present prediction: 1
+avg = 1.0
+white (43).png present prediction: 1
+avg = 1.0
+white (44).png present prediction: 1
+avg = 1.0
+white (45).png present prediction: 1
+avg = 1.0
+white (46).png present prediction: 1
+avg = 1.0
+white (47).png present prediction: 1
+avg = 1.0
+white (48).png present prediction: 1
+avg = 1.0
+white (49).png present prediction: 1
+avg = 1.0
+white (50).png present prediction: 1
+not present
+avg = 0.0
+not_present (25).png not present prediction: 0
+avg = 0.0
+not_present (26).png not present prediction: 0
+avg = 0.0
+not_present (27).png not present prediction: 0
+avg = 0.0
+not_present (28).png not present prediction: 0
+avg = 0.0
+not_present (29).png not present prediction: 0
+avg = 0.0
+not_present (30).png not present prediction: 0
+
+get Images time: 0:00:06.181809
+336000
+get CLF time: 0:11:37.340362
+present
+avg = 1.0
+white (51).png present prediction: 1
+avg = 1.0
+white (52).png present prediction: 1
+avg = 1.0
+white (53).png present prediction: 1
+avg = 1.0
+white (54).png present prediction: 1
+avg = 1.0
+white (55).png present prediction: 1
+avg = 1.0
+white (56).png present prediction: 1
+avg = 1.0
+white (57).png present prediction: 1
+avg = 1.0
+white (58).png present prediction: 1
+avg = 1.0
+white (59).png present prediction: 1
+avg = 1.0
+white (60).png present prediction: 1
+not present
+avg = 0.0
+not_present (31).png not present prediction: 0
+avg = 0.0
+not_present (32).png not present prediction: 0
+avg = 0.0
+not_present (33).png not present prediction: 0
+avg = 0.0
+not_present (34).png not present prediction: 0
+avg = 0.0
+not_present (35).png not present prediction: 0
+avg = 0.09
+not_present (36).png not present prediction: 0
+
+get Images time: 0:00:06.341946
+336000
+get CLF time: 0:11:50.729362
+present
+avg = 1.0
+white (61).png present prediction: 1
+avg = 1.0
+white (62).png present prediction: 1
+avg = 1.0
+white (63).png present prediction: 1
+avg = 1.0
+white (64).png present prediction: 1
+avg = 1.0
+white (65).png present prediction: 1
+avg = 1.0
+white (66).png present prediction: 1
+avg = 1.0
+white (67).png present prediction: 1
+avg = 1.0
+white (68).png present prediction: 1
+avg = 1.0
+white (69).png present prediction: 1
+avg = 1.0
+white (70).png present prediction: 1
+not present
+avg = 0.0
+not_present (37).png not present prediction: 0
+avg = 0.0
+not_present (38).png not present prediction: 0
+avg = 0.0
+not_present (39).png not present prediction: 0
+avg = 0.0
+not_present (40).png not present prediction: 0
+avg = 0.0
+not_present (41).png not present prediction: 0
+avg = 0.0
+not_present (42).png not present prediction: 0
+
+
+get Images time: 0:00:06.096235
+336000
+get CLF time: 0:11:56.272122
+present
+avg = 1.0
+white (71).png present prediction: 1
+avg = 1.0
+white (72).png present prediction: 1
+avg = 1.0
+white (73).png present prediction: 1
+avg = 1.0
+white (74).png present prediction: 1
+avg = 1.0
+white (75).png present prediction: 1
+avg = 1.0
+white (76).png present prediction: 1
+avg = 1.0
+white (77).png present prediction: 1
+avg = 1.0
+white (78).png present prediction: 1
+avg = 1.0
+white (79).png present prediction: 1
+avg = 1.0
+white (80).png present prediction: 1
+not present
+avg = 0.0
+not_present (43).png not present prediction: 0
+avg = 0.0
+not_present (44).png not present prediction: 0
+avg = 0.0
+not_present (45).png not present prediction: 0
+avg = 0.0
+not_present (46).png not present prediction: 0
+avg = 0.0
+not_present (47).png not present prediction: 0
+avg = 0.0
+not_present (48).png not present prediction: 0
+
+get Images time: 0:00:06.587657
+336000
+get CLF time: 0:13:04.261008
+present
+avg = 1.0
+white (81).png present prediction: 1
+avg = 1.0
+white (82).png present prediction: 1
+avg = 1.0
+white (83).png present prediction: 1
+avg = 1.0
+white (84).png present prediction: 1
+avg = 1.0
+white (85).png present prediction: 1
+avg = 1.0
+white (86).png present prediction: 1
+avg = 1.0
+white (87).png present prediction: 1
+avg = 1.0
+white (88).png present prediction: 1
+avg = 1.0
+white (89).png present prediction: 1
+avg = 1.0
+white (90).png present prediction: 1
+not present
+avg = 0.0
+not_present (49).png not present prediction: 0
+avg = 0.0
+not_present (50).png not present prediction: 0
+avg = 0.0
+not_present (51).png not present prediction: 0
+avg = 0.0
+not_present (52).png not present prediction: 0
+avg = 0.0
+not_present (53).png not present prediction: 0
+avg = 0.0
+not_present (54).png not present prediction: 0
+
+get Images time: 0:00:07.490932
+336000
+get CLF time: 0:15:21.949254
+present
+avg = 1.0
+white (100).png present prediction: 1
+avg = 1.0
+white (91).png present prediction: 1
+avg = 1.0
+white (92).png present prediction: 1
+avg = 1.0
+white (93).png present prediction: 1
+avg = 1.0
+white (94).png present prediction: 1
+avg = 1.0
+white (95).png present prediction: 1
+avg = 1.0
+white (96).png present prediction: 1
+avg = 1.0
+white (97).png present prediction: 1
+avg = 1.0
+white (98).png present prediction: 1
+avg = 1.0
+white (99).png present prediction: 1
+not present
+avg = 0.0
+not_present (51).png not present prediction: 0
+avg = 0.0
+not_present (52).png not present prediction: 0
+avg = 0.0
+not_present (53).png not present prediction: 0
+avg = 0.0
+not_present (54).png not present prediction: 0
+avg = 0.0
+not_present (55).png not present prediction: 0
+avg = 0.0
+not_present (56).png not present prediction: 0
+

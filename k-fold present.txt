@@ -19,6 +19,7 @@ avg = 1.0
 black (8).png present prediction: 1
 avg = 1.0
 black (9).png present prediction: 1 
+
 present
 avg = 1.0
 blue (1).png present prediction: 1

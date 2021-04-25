@@ -1,0 +1,185 @@
+get CLF time: 0:10:44.719807
+present
+avg = 0.93
+yellow (1).png present prediction: 1
+avg = 0.85
+yellow (10).png present prediction: 1
+avg = 0.93
+yellow (2).png present prediction: 1
+avg = 0.91
+yellow (3).png present prediction: 1
+avg = 0.93
+yellow (4).png present prediction: 1
+avg = 1.0
+yellow (5).png present prediction: 1
+avg = 1.0
+yellow (6).png present prediction: 1
+avg = 1.0
+yellow (7).png present prediction: 1
+avg = 1.0
+yellow (8).png present prediction: 1
+avg = 1.0
+yellow (9).png present prediction: 1
+
+
+get CLF time: 0:10:02.973384
+present
+avg = 1.0
+purple (1).png present prediction: 1
+avg = 1.0
+purple (10).png present prediction: 1
+avg = 1.0
+purple (2).png present prediction: 1
+avg = 1.0
+purple (3).png present prediction: 1
+avg = 1.0
+purple (4).png present prediction: 1
+avg = 1.0
+purple (5).png present prediction: 1
+avg = 1.0
+purple (6).png present prediction: 1
+avg = 1.0
+purple (7).png present prediction: 1
+avg = 1.0
+purple (8).png present prediction: 1
+avg = 1.0
+purple (9).png present prediction: 1
+
+present
+avg = 1.0
+light_gray (1).png present prediction: 1
+avg = 1.0
+light_gray (10).png present prediction: 1
+avg = 1.0
+light_gray (2).png present prediction: 1
+avg = 1.0
+light_gray (3).png present prediction: 1
+avg = 1.0
+light_gray (4).png present prediction: 1
+avg = 1.0
+light_gray (5).png present prediction: 1
+avg = 1.0
+light_gray (6).png present prediction: 1
+avg = 1.0
+light_gray (7).png present prediction: 1
+avg = 1.0
+light_gray (8).png present prediction: 1
+avg = 1.0
+light_gray (9).png present prediction: 1
+
+get CLF time: 0:09:55.394047
+present
+avg = 1.0
+dark_gray2 (1).png present prediction: 1
+avg = 1.0
+dark_gray2 (2).png present prediction: 1
+avg = 1.0
+dark_gray2 (3).png present prediction: 1
+avg = 1.0
+dark_gray2 (4).png present prediction: 1
+avg = 1.0
+dark_gray2 (5).png present prediction: 1
+avg = 1.0
+dark_gray2 (6).png present prediction: 1
+avg = 1.0
+dark_gray2 (7).png present prediction: 1
+avg = 1.0
+dark_gray2 (8).png present prediction: 1
+avg = 1.0
+dark_gray2 (9).png present prediction: 1
+
+
+get CLF time: 0:09:49.279098
+present
+avg = 0.56
+dark_gray (1).png present prediction: 1
+avg = 0.47
+dark_gray (10).png present prediction: 0
+avg = 1.0
+dark_gray (2).png present prediction: 1
+avg = 1.0
+dark_gray (3).png present prediction: 1
+avg = 1.0
+dark_gray (4).png present prediction: 1
+avg = 1.0
+dark_gray (5).png present prediction: 1
+avg = 1.0
+dark_gray (6).png present prediction: 1
+avg = 0.37
+dark_gray (7).png present prediction: 0
+avg = 0.35
+dark_gray (8).png present prediction: 0
+avg = 0.42
+dark_gray (9).png present prediction: 0
+
+
+get CLF time: 0:10:04.570758
+present
+avg = 1.0
+dark_blue (1).png present prediction: 1
+avg = 1.0
+dark_blue (10).png present prediction: 1
+avg = 1.0
+dark_blue (11).png present prediction: 1
+avg = 1.0
+dark_blue (2).png present prediction: 1
+avg = 1.0
+dark_blue (3).png present prediction: 1
+avg = 1.0
+dark_blue (4).png present prediction: 1
+avg = 1.0
+dark_blue (5).png present prediction: 1
+avg = 1.0
+dark_blue (6).png present prediction: 1
+avg = 1.0
+dark_blue (7).png present prediction: 1
+avg = 1.0
+dark_blue (8).png present prediction: 1
+avg = 1.0
+dark_blue (9).png present prediction: 1
+
+
+get CLF time: 0:10:15.800420
+present
+avg = 1.0
+blue (1).png present prediction: 1
+avg = 1.0
+blue (2).png present prediction: 1
+avg = 1.0
+blue (3).png present prediction: 1
+avg = 1.0
+blue (4).png present prediction: 1
+avg = 1.0
+blue (5).png present prediction: 1
+avg = 1.0
+blue (6).png present prediction: 1
+avg = 1.0
+blue (7).png present prediction: 1
+avg = 1.0
+blue (8).png present prediction: 1
+avg = 1.0
+blue (9).png present prediction: 1
+
+
+get CLF time: 0:09:45.658482
+present
+avg = 1.0
+black (1).png present prediction: 1
+avg = 1.0
+black (10).png present prediction: 1
+avg = 0.57
+black (2).png present prediction: 1
+avg = 0.53
+black (3).png present prediction: 1
+avg = 0.5
+black (4).png present prediction: 0
+avg = 0.53
+black (5).png present prediction: 1
+avg = 0.53
+black (6).png present prediction: 1
+avg = 1.0
+black (7).png present prediction: 1
+avg = 1.0
+black (8).png present prediction: 1
+avg = 1.0
+black (9).png present prediction: 1
