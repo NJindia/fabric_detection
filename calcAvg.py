@@ -13,55 +13,57 @@ from datetime import datetime
 
 def main():
     package_dir = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(package_dir, 'k-fold purple.txt')
+    path = os.path.join(package_dir, '2clf.txt')
+    print(path)
     with open(path) as f:
-        sum = 0
-        i=0
-        sumBinary = 0
         flines = f.readlines()
         lines = [line.strip() for line in flines]
-        sumPPV = 0
-        sumNPV = 0
-        negI = 0
-        posI = 0
-
+        sumTotal = 0
+        iTotal = 0
         for j in range(0, len(lines)):
             line = lines[j]
             j += 1
-            if(line ==  'present'):
-                while(line != 'not present' and j < len(lines)):
-                    line = lines[j]
-                    j += 1
-                    if 'avg = ' in line:
+            if('clf' in line):
+                print(line)
+                line = lines[j]
+                j+=1
+                sum = 0
+                i=0
+                truePres = 0 #accurate pres predictions
+                falsePres = 0
+                trueNotPres = 0
+                falseNotPres = 0
+                if(line ==  'present'):
+                    while(j < len(lines) and lines[j] != 'not present'):
+                        line = lines[j]
+                        j += 1
+                        arr = line.split()
+                        avg = float(arr[len(arr)-1])
+                        pred = int(arr[len(arr)-2])
+                        sum += avg
+                        sumTotal += avg
+                        iTotal += 1
                         i+=1
-                        posI+=1
-                        sum += float(line[6:])
-                        sumPPV+= float(line[6:])
-                    elif 'present prediction:' in line:
-                        ind = line.index('present prediction: ')
-                        index = ind+len('present prediction: ')
-                        sumBinary+=int(line[index:index+1])
-            elif(line == 'not present'):
-                while(line != 'present' and j < len(lines)):
-                    line = lines[j]
-                    j += 1
-                    if 'avg = ' in line:
+                        if(pred == 0): falseNotPres+=1
+                        elif(pred == 1): truePres+=1
+                if(lines[j] == 'not present'):
+                    j+=1
+                    while(j < len(lines) and 'not_present' in lines[j]):
+                        line = lines[j]
+                        j += 1
+                        arr = line.split()
+                        avg = float(arr[len(arr)-1])
+                        pred = int(arr[len(arr)-2])
+                        sum += 1 - avg
+                        sumTotal += 1 - avg
+                        iTotal += 1
                         i+=1
-                        negI+=1
-                        sum += 1 - float(line[6:])
-                        sumNPV+= 1 - float(line[6:])
-                    elif 'not present prediction: ' in line:
-                        ind = line.index('not present prediction: ')
-                        index = ind+len('not present prediction: ')
-                        sumBinary+=1 - int(line[index:index+1])
-        avg = sum/i
-        binAvg = sumBinary/i
-        PPV = sumPPV/posI
-        NPV = sumNPV/negI
-        print(sum, sumBinary, i)
-        print('PPV = ' + str(PPV))
-        print('NPV = ' + str(NPV))
-        print('avg = ' + str(avg))
-        print('binary avg = ' + str(binAvg))
+                        if(pred == 0): trueNotPres+=1
+                        else: falsePres+=1
+                avg = sum/i
+                print('truePres = %s\nfalsePres = %s\ntrueNotPres = %s\nfalseNotPres = %s\navg = %s\n' 
+                % (truePres, falsePres, trueNotPres, falseNotPres, avg))
+        avg = sumTotal/iTotal
+        print('avg = %s\n' % (avg))
 if __name__ == '__main__':
     main()

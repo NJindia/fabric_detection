@@ -52,8 +52,13 @@ class FabricDetector:
                 path = os.path.join(parent_folder_path, f)
                 img = cv2.imread(path)
                 roi = img[0:1544,374:1918]
-                # imgEq = self.shiftHist(roi)
-                imgs.append(Image(img=img, fileName=f, path=path, roi=roi))
+                imgEq = self.shiftHist(roi)
+                image = Image(img=imgEq, fileName=f, path=path, roi=roi)
+                acutance = self.getAcutance(image)
+                print('OG: ', f, acutance)
+                # acutance = self.getAcutance(imgEq)
+                # print('SHIFT: ', f, acutance)
+                imgs.append(image)
         return imgs
 
     def getHOG(self, img):
@@ -190,25 +195,23 @@ class FabricDetector:
 
         return clf
 
-    def sharpness(self, images):
-        for image in images:
-            im = self.getROI(image.roi)
-            array = np.asarray(im, dtype=np.int32)
-            print(np.diff(array,  axis=0).shape)
-            dx = np.diff(array)[1:,:] # remove the first row
-            dy = np.diff(array, axis=0)[:,1:] # remove the first column
-            print(dy)
-            dnorm = np.sqrt(dx**2 + dy**2)
-            sharpness = np.average(dnorm)
-            print(im.filename, sharpness)
+    def getAcutance(self, image):
+        img = image.image
+        lbound = 25
+        ubound = 150
+        edges = cv2.Canny(img,lbound,ubound) 
+        acutance = np.mean(edges)
+        cv2.imwrite(os.path.join(self.package_dir,'images\edges25', str(int(acutance)) + '_' + image.fileName), edges)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        return acutance
 
     def __init__(self):
         self.package_dir = os.path.dirname(os.path.abspath(__file__))
         presImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
-        self.sharpness(presImgs)
-        print('done')
         notPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
-        
+        print('done')
+
         newCLF = True
         if newCLF:
             clf = self.makeCLF()
