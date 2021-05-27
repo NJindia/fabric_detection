@@ -8,13 +8,15 @@ from skimage import data, exposure
 from sklearn import svm
 from joblib import load, dump
 from datetime import datetime
+from skimage import color, data, restoration
+from numpy.fft import fft2, ifft2
+from scipy.signal import gaussian
 
 class Image:
-    def __init__(self, img=None, fileName=None, path=None, roi=None):
-        self.image = img
+    def __init__(self, img=None, fileName=None, path=None):
+        self.img = img
         self.fileName = fileName
         self.path = path
-        self.roi = roi
 
     def __str__(self):
         return self.fileName
@@ -55,7 +57,8 @@ class FabricDetector:
                 img = cv2.imread(path)
                 roi = img[0:1544,374:1918]
                 imgEq = self.shiftHist(roi)
-                image = Image(img=imgEq, fileName=f, path=path, roi=roi)
+                # imgEq = roi
+                image = Image(img=imgEq, fileName=f, path=path)
                 # acutance = self.getAcutance(image)
                 # print('OG: ', f, acutance)
                 # acutance = self.getAcutance(imgEq)
@@ -118,7 +121,7 @@ class FabricDetector:
         h, s, v = cv2.split(hsv)
         h[:,: ] =  50
         diff1 = 128 - cv2.mean(s)[0]
-        diff2 = 128 - cv2.mean(v)[0] 
+        diff2 = 128 - cv2.mean(v)[0]
         s = s + int(diff1)
         v = v + int(diff2)
         s[s>255] = 255
@@ -129,6 +132,7 @@ class FabricDetector:
         v=v.astype(np.uint8)
         hsvNew = cv2.merge((h, s, v))
         final = cv2.cvtColor(hsvNew, cv2.COLOR_HSV2BGR)
+ 
         # cv2.imshow('final', final)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
@@ -139,7 +143,7 @@ class FabricDetector:
         clf = 0
         acutance = self.getAcutance(image)
         sum = 0
-        roi = self.getROI(image.roi)
+        roi = self.getROI(image.img)
         split = self.splitImg(roi)
         for im in split:
             hist = self.getHOG(im)
@@ -163,7 +167,7 @@ class FabricDetector:
         y = []
         for image in present:
             # print(image.fileName)
-            rotations = self.getRotations(image.roi)
+            rotations = self.getRotations(image.img)
             for rotation in rotations:
                 split = self.splitImg(rotation)
                 for img in split:
@@ -171,7 +175,7 @@ class FabricDetector:
                     y.append(1)
         for image in notPresent:
             # print(image.fileName)
-            rotations = self.getRotations(image.roi)
+            rotations = self.getRotations(image.img)
             for rotation in rotations:
                 split = self.splitImg(rotation)
                 for img in split:
@@ -203,16 +207,14 @@ class FabricDetector:
         return clf
 
     def getAcutance(self, image):
-        img = image.roi
+        if(type(image) == Image): img = self.getROI(image.img)
+        else: img = image
         lbound = 25
         ubound = 150
         edges = cv2.Canny(img,lbound,ubound) 
         acutance = np.mean(edges)
-        # cv2.imwrite(os.path.join(self.package_dir,'images\edges25', str(int(acutance)) + '_' + image.fileName), edges)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-        # print(image.fileName, acutance)
         return acutance
+
 
     def filterByAcutance(self, images):
         self.acutance_thresh = 5
@@ -266,8 +268,6 @@ class FabricDetector:
             trainNotPres = [item for sublist in trainNP2D for item in sublist]
             print(testPres)
             print('\n')
-            print(trainPres)
-            print('\n')
             print(testNotPres)
             print('\n')
             
@@ -306,6 +306,56 @@ class FabricDetector:
             f.write('not present\n')
             for prediction in clf2_results_np:
                 f.write('%s %s %s\n' % (prediction[0], prediction[1], prediction[2]))
+
+    def wiener_filter(self, img, kernel, K):
+        kernel /= np.sum(kernel)
+        dummy = np.copy(img)
+        dummy = fft2(dummy)
+        kernel = fft2(kernel, s = img.shape)
+        kernel = np.conj(kernel) / (np.abs(kernel) ** 2 + K)
+        dummy = dummy * kernel
+        dummy = np.abs(ifft2(dummy))
+        return dummy
+
+    def gaussian_kernel(self, kernel_size = 3):
+        h = gaussian(kernel_size, kernel_size / 3).reshape(kernel_size, 1)
+        h = np.dot(h, h.transpose())
+        h /= np.sum(h)
+        return h
+
+    def wiener(self, images):
+        print('\nwiener\n')
+        for image in images:
+            img = image.img
+            og = img
+            before = self.getAcutance(img)
+            # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = color.rgb2gray(img)
+            for i in range(1,4):        
+                psf = np.ones((i, i)) / (i*i)
+                # img = conv2(img, psf, 'same')
+                # img += 0.1 * img.std() * np.random.standard_normal(img.shape)
+
+                deconvolved, _ = restoration.unsupervised_wiener(img, psf)
+                print(before, self.getAcutance((deconvolved*255).astype(np.uint8)))
+
+                fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(8, 5),
+                                    sharex=True, sharey=True)
+
+                plt.gray()
+
+                ax[0].imshow(img)
+                ax[0].axis('off')
+                ax[0].set_title('Data')
+
+                ax[1].imshow(deconvolved)
+                ax[1].axis('off')
+                ax[1].set_title(str(i))
+
+                fig.tight_layout()
+
+                plt.show()
+
     def __init__(self):
         start = datetime.now()
         self.package_dir = os.path.dirname(os.path.abspath(__file__))
@@ -313,7 +363,7 @@ class FabricDetector:
         trainNotPresImgs = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
         self.kfold_present(trainPresImgs,trainNotPresImgs)
         print('kfold time: ', datetime.now() - start)
-        return
+        # return
         testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
         testNotPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
         #1 = high acutance, 2 = low acutance
@@ -321,6 +371,7 @@ class FabricDetector:
         
         
         trainPres1, trainPres2 = self.filterByAcutance(trainPresImgs)
+        # self.wiener(trainPres2)
 
         newCLF = True
         if newCLF:
