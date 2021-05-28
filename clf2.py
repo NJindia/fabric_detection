@@ -56,8 +56,8 @@ class FabricDetector:
                 path = os.path.join(parent_folder_path, f)
                 img = cv2.imread(path)
                 roi = img[0:1544,374:1918]
-                imgEq = self.shiftHist(roi)
-                # imgEq = roi
+                # imgEq = self.shiftHist(roi)
+                imgEq = roi
                 image = Image(img=imgEq, fileName=f, path=path)
                 # acutance = self.getAcutance(image)
                 # print('OG: ', f, acutance)
@@ -363,7 +363,7 @@ class FabricDetector:
         trainNotPresImgs = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
         self.kfold_present(trainPresImgs,trainNotPresImgs)
         print('kfold time: ', datetime.now() - start)
-        # return
+        return
         testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
         testNotPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
         #1 = high acutance, 2 = low acutance
