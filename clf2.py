@@ -224,8 +224,10 @@ class FabricDetector:
         for image in images:
             acutance = self.getAcutance(image)
             if(acutance > self.acutance_thresh):
+                image.img = self.shiftHist(image.img)
                 train1.append(image)
             else: 
+                image.img = self.shiftHist(image.img)
                 train2.append(image)
         return train1, train2
 
