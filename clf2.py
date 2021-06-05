@@ -10,7 +10,6 @@ from joblib import load, dump
 from datetime import datetime
 from skimage import color, data, restoration
 from numpy.fft import fft2, ifft2
-from scipy.signal import gaussian
 
 class Image:
     def __init__(self, img=None, fileName=None, path=None):
@@ -148,12 +147,18 @@ class FabricDetector:
         for im in split:
             hist = self.getHOG(im)
             hist = hist.reshape(1, -1)
-            if(acutance < self.acutance_thresh):
-                p = self.clf2.predict(hist)
-                clf = 2 #DEBUG
-            else:
+            if(acutance > self.acutance_thresh):
                 p = self.clf1.predict(hist)
                 clf = 1 #DEBUG
+            else: 
+                image = self.wiener(image)
+                acutance = self.getAcutance(image)
+                if(acutance > self.acutance_thresh):
+                    p = self.clf1.predict(hist)
+                    clf = 1 #DEBUG
+                else: 
+                    p = self.clf2.predict(hist)
+                    clf = 2 #DEBUG                
             if(p==1):
                 sum += 1
         pred = sum/len(split)
@@ -182,6 +187,7 @@ class FabricDetector:
                     X.append(self.getHOG(img))
                     y.append(0)
         clf = svm.SVC()
+        if(X == [] or y == []): return
         clf.fit(X, y)
         return clf
 
@@ -195,7 +201,7 @@ class FabricDetector:
         clf = self.getSVM_CLF(present, notPresent)
         getCLFTime = datetime.now()
         print('make CLF time: ' + str(getCLFTime - getImgsTime))
-        dump(clf, 'clf.pk1')
+        # dump(clf, 'clf.pk1')
         return clf
 
     def readCLF(self):
@@ -226,7 +232,12 @@ class FabricDetector:
             if(acutance > self.acutance_thresh):
                 train1.append(image)
             else: 
-                train2.append(image)
+                image = self.wiener(image)
+                acutance = self.getAcutance(image)
+                if(acutance > self.acutance_thresh):
+                    train1.append(image)
+                else: 
+                    train2.append(image)
         return train1, train2
 
     def kfold_present(self, presImages, notPresentImages):
@@ -307,54 +318,52 @@ class FabricDetector:
             for prediction in clf2_results_np:
                 f.write('%s %s %s\n' % (prediction[0], prediction[1], prediction[2]))
 
-    def wiener_filter(self, img, kernel, K):
-        kernel /= np.sum(kernel)
-        dummy = np.copy(img)
-        dummy = fft2(dummy)
-        kernel = fft2(kernel, s = img.shape)
-        kernel = np.conj(kernel) / (np.abs(kernel) ** 2 + K)
-        dummy = dummy * kernel
-        dummy = np.abs(ifft2(dummy))
-        return dummy
+    # Gaussian kernel generation function
+    def creat_gauss_kernel(self, kernel_size=5, sigma=1, k=1):
+        if sigma == 0:
+            sigma = ((kernel_size - 1) * 0.5 - 1) * 0.3 + 0.8
+        X = np.linspace(-k, k, kernel_size)
+        Y = np.linspace(-k, k, kernel_size)
+        x, y = np.meshgrid(X, Y)
+        x0 = 0
+        y0 = 0
+        gauss = 1/(2*np.pi*sigma**2) * np.exp(- ((x -x0)**2 + (y - y0)**2)/ (2 * sigma**2))
+        return gauss
 
-    def gaussian_kernel(self, kernel_size = 3):
-        h = gaussian(kernel_size, kernel_size / 3).reshape(kernel_size, 1)
-        h = np.dot(h, h.transpose())
-        h /= np.sum(h)
-        return h
 
-    def wiener(self, images):
-        print('\nwiener\n')
-        for image in images:
-            img = image.img
-            og = img
-            before = self.getAcutance(img)
-            # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            img = color.rgb2gray(img)
-            for i in range(1,4):        
-                psf = np.ones((i, i)) / (i*i)
-                # img = conv2(img, psf, 'same')
-                # img += 0.1 * img.std() * np.random.standard_normal(img.shape)
+    def wiener(self, image):
+        print(image.fileName)
+        img = image.img
+        og = img
+        before = self.getAcutance(img)
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        img = color.rgb2gray(img)
+        i = 2
+        psf = self.creat_gauss_kernel(sigma=i)
 
-                deconvolved, _ = restoration.unsupervised_wiener(img, psf)
-                print(before, self.getAcutance((deconvolved*255).astype(np.uint8)))
+        deconvolved, _ = restoration.unsupervised_wiener(img, psf)
+        deconvolved = (deconvolved*255).astype(np.uint8)
+        print(before, self.getAcutance(deconvolved))
 
-                fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(8, 5),
-                                    sharex=True, sharey=True)
+        # fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(8, 5),
+        #                     sharex=True, sharey=True)
 
-                plt.gray()
+        # plt.gray()
 
-                ax[0].imshow(img)
-                ax[0].axis('off')
-                ax[0].set_title('Data')
+        # ax[0].imshow(img)
+        # ax[0].axis('off')
+        # ax[0].set_title(image.fileName)
 
-                ax[1].imshow(deconvolved)
-                ax[1].axis('off')
-                ax[1].set_title(str(i))
+        # ax[1].imshow(deconvolved)
+        # ax[1].axis('off')
+        # ax[1].set_title(str(i))
 
-                fig.tight_layout()
+        # fig.tight_layout()
 
-                plt.show()
+        # plt.show()
+        
+        image.img = deconvolved
+        return image
 
     def __init__(self):
         start = datetime.now()
@@ -364,13 +373,13 @@ class FabricDetector:
         self.kfold_present(trainPresImgs,trainNotPresImgs)
         print('kfold time: ', datetime.now() - start)
         return
-        testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
-        testNotPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
+        # testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
+        # testNotPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
         #1 = high acutance, 2 = low acutance
         
         
         
-        trainPres1, trainPres2 = self.filterByAcutance(trainPresImgs)
+        # trainPres1, trainPres2 = self.filterByAcutance(trainPresImgs)
         # self.wiener(trainPres2)
 
         newCLF = True

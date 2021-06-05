@@ -3,48 +3,28 @@ import numpy as np
 import os
 import sys
 from matplotlib import pyplot as plt
+from scipy.ndimage.measurements import maximum
 from skimage.feature import hog
 from skimage import data, exposure
 from sklearn import svm
 from joblib import load, dump
 from datetime import datetime
+from skimage import color, data, restoration
+from numpy.fft import fft2, ifft2
 
 class Image:
-    def __init__(self, img=None, fileName=None, path=None, roi=None):
-        self.image = img
+    def __init__(self, img=None, fileName=None, path=None):
+        self.img = img
         self.fileName = fileName
         self.path = path
-        self.roi = roi
 
     def __str__(self):
         return self.fileName
+    def __repr__(self):
+        return self.fileName
 
 class FabricDetector:    
-    def increaseContrast(self, img):
-        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
-
-        # -----Applying CLAHE to L-channel-------------------------------------------
-        clahe = cv2.createCLAHE(clipLimit=1000.0, tileGridSize=(8, 8))
-        cl = clahe.apply(l)
-
-        # -----Merge the CLAHE enhanced L-channel with the a and b channel-----------
-        limg = cv2.merge((cl, a, b))
-
-        # -----Converting image from LAB Color model to RGB model--------------------
-        final = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
-        final = cv2.cvtColor(final, cv2.COLOR_BGR2GRAY)
-        # cv2.imshow("bw",img_bin)
-        # cv2.imshow('l_channel', l)
-        # cv2.imshow('a_channel', a)
-        # cv2.imshow('b_channel', b)
-        # cv2.imshow('limg', limg)
-        # cv2.imshow('CLAHE output', cl)
-        # cv2.imshow('final', final)
-        # cv2.waitKey(0)
-
-        return final
-
+    
     def getImages(self, parent_folder_path):
         imgs = []
         for f in os.listdir(parent_folder_path):
@@ -52,10 +32,11 @@ class FabricDetector:
                 path = os.path.join(parent_folder_path, f)
                 img = cv2.imread(path)
                 roi = img[0:1544,374:1918]
-                imgEq = self.shiftHist(roi)
-                image = Image(img=imgEq, fileName=f, path=path, roi=roi)
-                acutance = self.getAcutance(image)
-                print('OG: ', f, acutance)
+                # imgEq = self.shiftHist(roi)
+                imgEq = roi
+                image = Image(img=imgEq, fileName=f, path=path)
+                # acutance = self.getAcutance(image)
+                # print('OG: ', f, acutance)
                 # acutance = self.getAcutance(imgEq)
                 # print('SHIFT: ', f, acutance)
                 imgs.append(image)
@@ -116,7 +97,7 @@ class FabricDetector:
         h, s, v = cv2.split(hsv)
         h[:,: ] =  50
         diff1 = 128 - cv2.mean(s)[0]
-        diff2 = 128 - cv2.mean(v)[0] 
+        diff2 = 128 - cv2.mean(v)[0]
         s = s + int(diff1)
         v = v + int(diff2)
         s[s>255] = 255
@@ -127,35 +108,38 @@ class FabricDetector:
         v=v.astype(np.uint8)
         hsvNew = cv2.merge((h, s, v))
         final = cv2.cvtColor(hsvNew, cv2.COLOR_HSV2BGR)
+ 
         # cv2.imshow('final', final)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         return final
 
 
-    def predictPresence(self, clf, image):
+    def predictPresence(self, image):
+        acutance = self.getAcutance(image)
         sum = 0
-        roi = self.getROI(image.roi)
+        # if(acutance < self.acutance_thresh):
+        #     image = self.wiener(image)
+        roi = self.getROI(image.img)
         split = self.splitImg(roi)
         for im in split:
             hist = self.getHOG(im)
             hist = hist.reshape(1, -1)
-            p = clf.predict(hist)
+            p = self.clf.predict(hist)
             if(p==1):
                 sum += 1
         pred = sum/len(split)
-        print('avg = ' + str(pred))
         if(pred > 0.5):
-            return 1
+            return 1, pred #DEBUG
         else:
-            return 0
+            return 0, pred #DEBUG
 
     def getSVM_CLF(self, present, notPresent):
         X = []
         y = []
         for image in present:
             # print(image.fileName)
-            rotations = self.getRotations(image.roi)
+            rotations = self.getRotations(image.img)
             for rotation in rotations:
                 split = self.splitImg(rotation)
                 for img in split:
@@ -163,28 +147,28 @@ class FabricDetector:
                     y.append(1)
         for image in notPresent:
             # print(image.fileName)
-            rotations = self.getRotations(image.roi)
+            rotations = self.getRotations(image.img)
             for rotation in rotations:
                 split = self.splitImg(rotation)
                 for img in split:
                     X.append(self.getHOG(img))
                     y.append(0)
         clf = svm.SVC()
-        print(len(y))
+        if(X == [] or y == []): return
         clf.fit(X, y)
         return clf
 
-    def makeCLF(self):
-        start = datetime.now()
-        print('start')
-        present = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
-        notPresent = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
+    def makeCLF(self, present, notPresent):
+        # start = datetime.now()
+        # # print('start')
+        # # present = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
+        # # notPresent = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
         getImgsTime = datetime.now()
-        print('get Images time: ' + str(getImgsTime - start))
+        # print('get Images time: ' + str(getImgsTime - start))
         clf = self.getSVM_CLF(present, notPresent)
         getCLFTime = datetime.now()
-        print('get CLF time: ' + str(getCLFTime - getImgsTime))
-        dump(clf, 'clf.pk1')
+        print('make CLF time: ' + str(getCLFTime - getImgsTime))
+        # dump(clf, 'clf.pk1')
         return clf
 
     def readCLF(self):
@@ -196,36 +180,188 @@ class FabricDetector:
         return clf
 
     def getAcutance(self, image):
-        img = image.image
+        if(type(image) == Image): img = self.getROI(image.img)
+        else: img = image
         lbound = 25
         ubound = 150
         edges = cv2.Canny(img,lbound,ubound) 
         acutance = np.mean(edges)
-        cv2.imwrite(os.path.join(self.package_dir,'images\edges25', str(int(acutance)) + '_' + image.fileName), edges)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
         return acutance
 
+
+    # def filterByAcutance(self, images):
+    #     self.acutance_thresh = 5
+    #     #1 = high acutance, 2 = low acutance
+    #     train1 = []
+    #     train2 = []
+    #     for image in images:
+    #         acutance = self.getAcutance(image)
+    #         if(acutance > self.acutance_thresh):
+    #             train1.append(image)
+    #         else: 
+    #             image = self.wiener(image)
+    #             acutance = self.getAcutance(image)
+    #             if(acutance > self.acutance_thresh):
+    #                 train1.append(image)
+    #             else: 
+    #                 train2.append(image)
+    #     return train1, train2
+
+    def focusImages(self, images):
+        newImages = []
+        for image in images:
+            acutance = self.getAcutance(image)
+            if(acutance < self.acutance_thresh):
+                image = self.wiener(image)
+            newImages.append(image)
+        return newImages
+
+    def kfold_present(self, presImages, notPresImages):
+        colors = []
+        notPresArr = []
+        #FILENAME BINPRED AVG
+        results_p = []
+        results_np = []
+        presImages = self.focusImages(presImages)
+        notPresImages = self.focusImages(notPresImages)
+        i = 0
+        while(i < len(presImages)):
+            color = presImages[i].fileName.split()[0]
+            colorArr = []
+            while(i < len(presImages) and presImages[i].fileName.split()[0] == color):
+                colorArr.append(presImages[i])
+                i+=1
+            colors.append(colorArr)
+        
+        i = 0
+        while(i < len(notPresImages)):
+            j = 0
+            npImageSet = []
+            while(j<= 6):
+                npImageSet.append(notPresImages[i])
+                j+=1
+                i+=1
+            notPresArr.append(npImageSet)
+        notPresArr.append(notPresArr[len(notPresArr)-1])
+        
+        i=0
+        while(i < len(colors) and i < len(notPresArr)):
+            testPres = colors[i]
+            trainP2D = colors[:i] + colors[i+1:]
+            trainPres = [item for sublist in trainP2D for item in sublist]
+            testNotPres = notPresArr[i]
+            trainNP2D = notPresArr[:i] + notPresArr[i+1:]
+            trainNotPres = [item for sublist in trainNP2D for item in sublist]
+            print(testPres)
+            print('\n')
+            print(testNotPres)
+            print('\n')
+            
+            print('making clfs')
+            self.clf = self.makeCLF(trainPres, trainNotPres)
+            print("predicting")
+            for image in testPres:
+                prediction, avg = self.predictPresence(image)
+                print(image.fileName, prediction, avg)
+                results_p.append((image.fileName, prediction, avg))
+            for image in testNotPres:
+                prediction, avg = self.predictPresence(image)
+                print(image.fileName, prediction, avg)
+                results_np.append((image.fileName, prediction, avg))
+            i+=1
+        path = os.path.join(self.package_dir, 'wiener.txt')
+        with open(path, 'w') as f:
+            f.write('present\n')
+            for prediction in results_p:
+                f.write('%s %s %s\n' % (prediction[0], prediction[1], prediction[2]))
+            f.write('not present\n')
+            for prediction in results_np:
+                f.write('%s %s %s\n' % (prediction[0], prediction[1], prediction[2]))
+
+    # Gaussian kernel generation function
+    def creat_gauss_kernel(self, kernel_size=3, sigma=1, k=1):
+        if sigma == 0:
+            sigma = ((kernel_size - 1) * 0.5 - 1) * 0.3 + 0.8
+        X = np.linspace(-k, k, kernel_size)
+        Y = np.linspace(-k, k, kernel_size)
+        x, y = np.meshgrid(X, Y)
+        x0 = 0
+        y0 = 0
+        gauss = 1/(2*np.pi*sigma**2) * np.exp(- ((x -x0)**2 + (y - y0)**2)/ (2 * sigma**2))
+        gaussian = gauss/(np.sum(gauss))
+        return gaussian
+
+
+    def wiener(self, image):
+        img = image.img
+        og = img
+        before = self.getAcutance(img)  
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        img = color.rgb2gray(img)
+        i = 5
+        psf = self.creat_gauss_kernel(sigma=i)
+        deconvolved, _ = restoration.unsupervised_wiener(img, psf)
+        deconvolved = (deconvolved*255).astype(np.uint8)
+        print(image.fileName, before, self.getAcutance(deconvolved))
+
+        # fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(8, 5),
+        #                     sharex=True, sharey=True)
+
+        # plt.gray()
+
+        # ax[0].imshow(img)
+        # ax[0].axis('off')
+        # ax[0].set_title(image.fileName)
+
+        # ax[1].imshow(deconvolved)
+        # ax[1].axis('off')
+        # ax[1].set_title(str(j))
+
+        # fig.tight_layout()
+
+        # plt.show()
+            
+        image.img = deconvolved
+        return image
+
     def __init__(self):
+        start = datetime.now()
+        self.acutance_thresh = 5
         self.package_dir = os.path.dirname(os.path.abspath(__file__))
-        presImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
-        notPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
-        print('done')
+        trainPresImgs = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
+        trainNotPresImgs = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
+        # self.kfold_present(trainPresImgs,trainNotPresImgs)
+        # print('kfold time: ', datetime.now() - start)
+        # return
+        testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
+        testNotPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
+        #1 = high acutance, 2 = low acutance
+        trainPresImgs = self.focusImages(trainPresImgs)
+        trainNotPresImgs = self.focusImages(trainNotPresImgs)
+        testPresImgs = self.focusImages(testPresImgs)
+        testNotPresImgs = self.focusImages(testNotPresImgs)
+
+
+        
+        # trainPres1, trainPres2 = self.filterByAcutance(trainPresImgs)
+        # self.wiener(trainPres2)
 
         newCLF = True
         if newCLF:
-            clf = self.makeCLF()
+            self.clf = self.makeCLF(trainPresImgs, trainNotPresImgs)
+            # self.clf1 = self.makeCLF(trainPres1, trainNotPresImgs)
+            # self.clf2 = self.makeCLF(trainPres2, trainNotPresImgs)
         else: 
             clf = self.readCLF()
         # np.savetxt('avgPresentHist.csv', avgPresentHist, fmt='%s', delimiter=',', header="value")
         # np.savetxt('avgNotPresentHist.csv', avgNotPresentHist, fmt='%s', delimiter=',', header="value")    
         print("present")
-        for presImg in presImgs:
-            presPrediction = self.predictPresence(clf, presImg)
+        for presImg in testPresImgs:
+            presPrediction = self.predictPresence(presImg)
             print(presImg.fileName + ' present prediction: ' + str(presPrediction))
         print("not present")
-        for notPresImg in notPresImgs:
-            notPresPrediction = self.predictPresence(clf, notPresImg)
+        for notPresImg in testNotPresImgs:
+            notPresPrediction = self.predictPresence(notPresImg)
             print(notPresImg.fileName + ' not present prediction: ' + str(notPresPrediction))
     
 
