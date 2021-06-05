@@ -230,14 +230,11 @@ class FabricDetector:
         for image in images:
             acutance = self.getAcutance(image)
             if(acutance > self.acutance_thresh):
+                image.img = self.shiftHist(image.img)
                 train1.append(image)
             else: 
-                image = self.wiener(image)
-                acutance = self.getAcutance(image)
-                if(acutance > self.acutance_thresh):
-                    train1.append(image)
-                else: 
-                    train2.append(image)
+                image.img = self.shiftHist(image.img)
+                train2.append(image)
         return train1, train2
 
     def kfold_present(self, presImages, notPresentImages):
