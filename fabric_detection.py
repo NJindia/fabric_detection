@@ -188,33 +188,13 @@ class FabricDetector:
         acutance = np.mean(edges)
         return acutance
 
-
-    # def filterByAcutance(self, images):
-    #     self.acutance_thresh = 5
-    #     #1 = high acutance, 2 = low acutance
-    #     train1 = []
-    #     train2 = []
-    #     for image in images:
-    #         acutance = self.getAcutance(image)
-    #         if(acutance > self.acutance_thresh):
-    #             train1.append(image)
-    #         else: 
-    #             image = self.wiener(image)
-    #             acutance = self.getAcutance(image)
-    #             if(acutance > self.acutance_thresh):
-    #                 train1.append(image)
-    #             else: 
-    #                 train2.append(image)
-    #     return train1, train2
-
     def focusImages(self, images):
-        newImages = []
         for image in images:
             acutance = self.getAcutance(image)
             if(acutance < self.acutance_thresh):
-                image = self.wiener(image)
-            newImages.append(image)
-        return newImages
+                image.img = self.wiener(image)
+            else:
+                image.img = (color.rgb2gray(image.img)*255).astype(np.uint8)
 
     def kfold_present(self, presImages, notPresImages):
         colors = []
@@ -222,8 +202,8 @@ class FabricDetector:
         #FILENAME BINPRED AVG
         results_p = []
         results_np = []
-        presImages = self.focusImages(presImages)
-        notPresImages = self.focusImages(notPresImages)
+        # presImages = self.focusImages(presImages)
+        # notPresImages = self.focusImages(notPresImages)
         i = 0
         while(i < len(presImages)):
             color = presImages[i].fileName.split()[0]
@@ -256,8 +236,8 @@ class FabricDetector:
             print('\n')
             print(testNotPres)
             print('\n')
-            
-            print('making clfs')
+            time = datetime.now()
+            print('making clfs '+ str(time))
             self.clf = self.makeCLF(trainPres, trainNotPres)
             print("predicting")
             for image in testPres:
@@ -321,8 +301,7 @@ class FabricDetector:
 
         # plt.show()
             
-        image.img = deconvolved
-        return image
+        return deconvolved
 
     def __init__(self):
         start = datetime.now()
@@ -330,21 +309,20 @@ class FabricDetector:
         self.package_dir = os.path.dirname(os.path.abspath(__file__))
         trainPresImgs = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
         trainNotPresImgs = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
-        # self.kfold_present(trainPresImgs,trainNotPresImgs)
-        # print('kfold time: ', datetime.now() - start)
-        # return
+
+        self.focusImages(trainPresImgs)
+        self.focusImages(trainNotPresImgs)
+
+        self.kfold_present(trainPresImgs,trainNotPresImgs)
+        print('kfold time: ', datetime.now() - start)
+        return
         testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
         testNotPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
         #1 = high acutance, 2 = low acutance
-        trainPresImgs = self.focusImages(trainPresImgs)
-        trainNotPresImgs = self.focusImages(trainNotPresImgs)
+
         testPresImgs = self.focusImages(testPresImgs)
         testNotPresImgs = self.focusImages(testNotPresImgs)
-
-
-        
         # trainPres1, trainPres2 = self.filterByAcutance(trainPresImgs)
-        # self.wiener(trainPres2)
 
         newCLF = True
         if newCLF:
