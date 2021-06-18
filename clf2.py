@@ -198,7 +198,7 @@ class FabricDetector:
             acutance = self.getAcutance(image)
             if(acutance > self.acutance_thresh):
                 image.clf = 1
-                image.img = self.shiftHist(image.img)
+                # image.img = self.shiftHist(image.img)
             else: 
                 # image.img = self.shiftHist(image.img)
                 image.clf = 2
@@ -327,22 +327,22 @@ class FabricDetector:
         deconvolved = (deconvolved*255).astype(np.uint8)
         print(image.fileName, before, self.getAcutance(deconvolved))
 
-        # fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(8, 5),
-        #                     sharex=True, sharey=True)
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(8, 5),
+                            sharex=True, sharey=True)
 
-        # plt.gray()
+        plt.gray()
 
-        # ax[0].imshow(img)
-        # ax[0].axis('off')
-        # ax[0].set_title(image.fileName)
+        ax[0].imshow(img)
+        ax[0].axis('off')
+        ax[0].set_title(image.fileName)
 
-        # ax[1].imshow(deconvolved)
-        # ax[1].axis('off')
-        # ax[1].set_title(str(j))
+        ax[1].imshow(deconvolved)
+        ax[1].axis('off')
+        ax[1].set_title('wiener')
 
-        # fig.tight_layout()
+        fig.tight_layout()
 
-        # plt.show()
+        plt.show()
         return deconvolved
 
     def __init__(self):

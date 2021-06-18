@@ -13,7 +13,7 @@ from datetime import datetime
 
 def main():
     package_dir = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(package_dir, 'Wiener GrayScale.txt')
+    path = os.path.join(package_dir, 'wiener.txt')
     print(path)
     with open(path) as f:
         flines = f.readlines()

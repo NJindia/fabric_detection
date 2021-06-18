@@ -7,10 +7,14 @@ from scipy.ndimage.measurements import maximum
 from skimage.feature import hog
 from skimage import data, exposure
 from sklearn import svm
+from sklearn.decomposition import PCA
+from sklearn import cross_validation
 from joblib import load, dump
 from datetime import datetime
 from skimage import color, data, restoration
 from numpy.fft import fft2, ifft2
+import xlsxwriter
+
 
 class Image:
     def __init__(self, img=None, fileName=None, path=None):
@@ -44,9 +48,6 @@ class FabricDetector:
 
     def getHOG(self, img):
         hist = hog(img, orientations=36, pixels_per_cell=(100, 100), cells_per_block=(1, 1))
-        # cv2.imshow('hog', vis)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
         return hist
 
     def getROI(self, img):
@@ -85,11 +86,6 @@ class FabricDetector:
             rotations.append(roi)
         return rotations
  
-    def getLChannel(self, img):
-        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
-        return l
-
     def shiftHist(self, img):
         # cv2.imshow('og', img)
         start = datetime.now()
@@ -113,48 +109,92 @@ class FabricDetector:
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         return final
-
+    
+    def scorePresence(self, images, present = True):
+        X = []
+        y = []
+        for image in images:
+            sum = 0
+            rotations = self.getRotations(image.img)
+            hists = []
+            for rotation in rotations:
+                split = self.splitImg(rotation)
+                for img in split:
+                    hist = self.getHOG(img)
+                    hists.append(hist)
+            avgHist = self.getAvgHist(hists)
+            roi = self.getROI(image.img)
+            split = self.splitImg(roi)
+            for im in split:
+                hist = self.getHOG(im)
+                X.append([np.concatenate((hist, avgHist))])
+                if(present): y.append(1)
+                else: y.append(0)
+        
+    def PCA(self, X_train, X_test, n_components=2):
+        pca = PCA(n_components)# adjust yourself
+        pca.fit(X_train)
+        X_train_pca = pca.transform(X_train)
+        X_test_pca = pca.transform(X_test)
+        return X_test_pca, X_train_pca
 
     def predictPresence(self, image):
         acutance = self.getAcutance(image)
         sum = 0
         # if(acutance < self.acutance_thresh):
         #     image = self.wiener(image)
+        rotations = self.getRotations(image.img)
+        hists = []
+        for rotation in rotations:
+            split = self.splitImg(rotation)
+            for img in split:
+                hist = self.getHOG(img)
+                hists.append(hist)
+        avgHist = self.getAvgHist(hists)
         roi = self.getROI(image.img)
         split = self.splitImg(roi)
         for im in split:
             hist = self.getHOG(im)
-            hist = hist.reshape(1, -1)
-            p = self.clf.predict(hist)
+            p = self.clf.predict([np.concatenate((hist, avgHist))])
             if(p==1):
                 sum += 1
         pred = sum/len(split)
         if(pred > 0.5):
-            return 1, pred #DEBUG
+            return 1, pred
         else:
-            return 0, pred #DEBUG
+            return 0, pred
 
     def getSVM_CLF(self, present, notPresent):
         X = []
         y = []
         for image in present:
-            # print(image.fileName)
             rotations = self.getRotations(image.img)
+            hists = []
             for rotation in rotations:
                 split = self.splitImg(rotation)
                 for img in split:
-                    X.append(self.getHOG(img))
-                    y.append(1)
+                    hist = self.getHOG(img)
+                    hists.append(hist)
+            avgHist = self.getAvgHist(hists)
+            for hist in hists:
+                X.append(np.concatenate((hist, avgHist)))
+                y.append(1)
         for image in notPresent:
-            # print(image.fileName)
             rotations = self.getRotations(image.img)
+            hists = []
             for rotation in rotations:
                 split = self.splitImg(rotation)
                 for img in split:
-                    X.append(self.getHOG(img))
-                    y.append(0)
+                    hist = self.getHOG(img)
+                    hists.append(hist)
+            avgHist = self.getAvgHist(hists)
+            for hist in hists:
+                X.append(np.concatenate((hist, avgHist)))
+                y.append(0)
         clf = svm.SVC()
         if(X == [] or y == []): return
+        X = np.array(X)
+        print(X)
         clf.fit(X, y)
         return clf
 
@@ -193,8 +233,6 @@ class FabricDetector:
             acutance = self.getAcutance(image)
             if(acutance < self.acutance_thresh):
                 image.img = self.wiener(image)
-            else:
-                image.img = (color.rgb2gray(image.img)*255).astype(np.uint8)
 
     def kfold_present(self, presImages, notPresImages):
         colors = []
@@ -212,7 +250,7 @@ class FabricDetector:
                 colorArr.append(presImages[i])
                 i+=1
             colors.append(colorArr)
-        
+
         i = 0
         while(i < len(notPresImages)):
             j = 0
@@ -256,8 +294,48 @@ class FabricDetector:
                 f.write('%s %s %s\n' % (prediction[0], prediction[1], prediction[2]))
             f.write('not present\n')
             for prediction in results_np:
-                f.write('%s %s %s\n' % (prediction[0], prediction[1], prediction[2]))
+                f.write('%s %s %s\n' % (prediction[0], prediction[1], prediction[2]))        
+        
+    def getAvgHist(self, hists):
+        sum = np.full(len(hists[0]), 0)
+        for hist in hists:
+            sum = np.add(sum, hist)
+        divisor = np.full(len(hists[0]), len(hists))
+        average = np.divide(sum, divisor)
+        return average
 
+    def writeHOGsToFile(self, images):
+        averages = {}
+        for image in images:
+            hists = []
+            rotations = self.getRotations(image.img)
+            for rotation in rotations:
+                split = self.splitImg(rotation)
+                # split = self.splitImg(self.getROI(image.img))
+                for im in split:
+                    hist = self.getHOG(im)
+                    hists.append(hist)
+            average = self.getAvgHist(hists)
+            averages[image.fileName] = average
+
+        path = os.path.join(self.package_dir,'HOGs2/', 'avgHistsPR2.xlsx')
+        wb = xlsxwriter.Workbook(path)
+        sheet = wb.add_worksheet()
+        sheet.write(0, 0, 'Bin')
+        for k in range(1, 37):
+            sheet.write(k, 0, k)
+
+        col = 1
+        for key in averages:
+            hist = averages[key]
+            sheet.write(0, col, key)
+            for i in range(0, len(hist)):
+                sheet.write(i+1, col, hist[i])
+            col = col + 1
+
+        wb.close()
+        
+    
     # Gaussian kernel generation function
     def creat_gauss_kernel(self, kernel_size=3, sigma=1, k=1):
         if sigma == 0:
@@ -304,26 +382,31 @@ class FabricDetector:
         return deconvolved
 
     def __init__(self):
+        # np.set_printoptions(threshold=sys.maxsize)
         start = datetime.now()
         self.acutance_thresh = 5
         self.package_dir = os.path.dirname(os.path.abspath(__file__))
         trainPresImgs = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
         trainNotPresImgs = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
 
-        self.focusImages(trainPresImgs)
-        self.focusImages(trainNotPresImgs)
+        # self.focusImages(trainPresImgs)
+        # self.focusImages(trainNotPresImgs)
 
         self.kfold_present(trainPresImgs,trainNotPresImgs)
         print('kfold time: ', datetime.now() - start)
         return
         testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
         testNotPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
+
         #1 = high acutance, 2 = low acutance
 
-        testPresImgs = self.focusImages(testPresImgs)
-        testNotPresImgs = self.focusImages(testNotPresImgs)
-        # trainPres1, trainPres2 = self.filterByAcutance(trainPresImgs)
+        self.writeHOGsToFile(testPresImgs)
+        return
+        # testPresImgs = self.focusImages(testPresImgs)
+        # testNotPresImgs = self.focusImages(testNotPresImgs)
+        self.getSVM_CLF(testPresImgs, testNotPresImgs)
 
+        return
         newCLF = True
         if newCLF:
             self.clf = self.makeCLF(trainPresImgs, trainNotPresImgs)
