@@ -8,7 +8,6 @@ from skimage.feature import hog
 from skimage import data, exposure
 from sklearn import svm
 from sklearn.decomposition import PCA
-from sklearn import cross_validation
 from joblib import load, dump
 from datetime import datetime
 from skimage import color, data, restoration
@@ -109,62 +108,39 @@ class FabricDetector:
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         return final
-    
-    def scorePresence(self, images, present = True):
-        X = []
-        y = []
+        
+    def predictPresence(self, images):
+        predictions = []
         for image in images:
             sum = 0
-            rotations = self.getRotations(image.img)
+            pred = 0
             hists = []
-            for rotation in rotations:
-                split = self.splitImg(rotation)
-                for img in split:
-                    hist = self.getHOG(img)
-                    hists.append(hist)
-            avgHist = self.getAvgHist(hists)
+            # rotations = self.getRotations(image.img)
+            # hists = []
+            # for rotation in rotations:
+            #     split = self.splitImg(rotation)
+            #     for img in split:
+            #         hist = self.getHOG(img)
+            #         hists.append(hist)
+            # avgHist = self.getAvgHist(hists)
             roi = self.getROI(image.img)
             split = self.splitImg(roi)
             for im in split:
                 hist = self.getHOG(im)
-                X.append([np.concatenate((hist, avgHist))])
-                if(present): y.append(1)
-                else: y.append(0)
-        
-    def PCA(self, X_train, X_test, n_components=2):
-        pca = PCA(n_components)# adjust yourself
-        pca.fit(X_train)
-        X_train_pca = pca.transform(X_train)
-        X_test_pca = pca.transform(X_test)
-        return X_test_pca, X_train_pca
-
-    def predictPresence(self, image):
-        acutance = self.getAcutance(image)
-        sum = 0
-        # if(acutance < self.acutance_thresh):
-        #     image = self.wiener(image)
-        rotations = self.getRotations(image.img)
-        hists = []
-        for rotation in rotations:
-            split = self.splitImg(rotation)
-            for img in split:
-                hist = self.getHOG(img)
+                # X.append(np.concatenate((hist, avgHist))) #AVG HIST 
                 hists.append(hist)
-        avgHist = self.getAvgHist(hists)
-        roi = self.getROI(image.img)
-        split = self.splitImg(roi)
-        for im in split:
-            hist = self.getHOG(im)
-            p = self.clf.predict([np.concatenate((hist, avgHist))])
-            if(p==1):
-                sum += 1
-        pred = sum/len(split)
-        if(pred > 0.5):
-            return 1, pred
-        else:
-            return 0, pred
+            PCA_hists = self.pca.transform(hists)
+            split_preds = self.clf.predict(PCA_hists)
+            dist = self.clf.decision_function(PCA_hists)
+            for i in range(0, len(split_preds)): sum += split_preds[i] 
+            pred = sum/len(split)
+            if(pred > 0.5): p = 1
+            else: p = 0
+            predictions.append([image.fileName, p, pred])
+        return predictions #fileName, prediction, avg
 
-    def getSVM_CLF(self, present, notPresent):
+    def makeCLFandPCA(self, present, notPresent):
+        start = datetime.now()
         X = []
         y = []
         for image in present:
@@ -175,9 +151,10 @@ class FabricDetector:
                 for img in split:
                     hist = self.getHOG(img)
                     hists.append(hist)
-            avgHist = self.getAvgHist(hists)
+            # avgHist = self.getAvgHist(hists)
             for hist in hists:
-                X.append(np.concatenate((hist, avgHist)))
+                # X.append(np.concatenate((hist, avgHist)))
+                X.append(hist)
                 y.append(1)
         for image in notPresent:
             rotations = self.getRotations(image.img)
@@ -187,37 +164,28 @@ class FabricDetector:
                 for img in split:
                     hist = self.getHOG(img)
                     hists.append(hist)
-            avgHist = self.getAvgHist(hists)
+            # avgHist = self.getAvgHist(hists)
             for hist in hists:
-                X.append(np.concatenate((hist, avgHist)))
+                # X.append(np.concatenate((hist, avgHist)))
+                X.append(hist)
                 y.append(0)
-        clf = svm.SVC()
+        self.clf = svm.SVC()
         if(X == [] or y == []): return
         X = np.array(X)
         print(X)
-        clf.fit(X, y)
-        return clf
-
-    def makeCLF(self, present, notPresent):
-        # start = datetime.now()
-        # # print('start')
-        # # present = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
-        # # notPresent = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
-        getImgsTime = datetime.now()
-        # print('get Images time: ' + str(getImgsTime - start))
-        clf = self.getSVM_CLF(present, notPresent)
+        self.pca = PCA(4)# adjust yourself
+        self.pca.fit(X)
+        X_train = self.pca.transform(X)
+        print(X_train)
+        self.clf.fit(X_train, y)
         getCLFTime = datetime.now()
-        print('make CLF time: ' + str(getCLFTime - getImgsTime))
-        # dump(clf, 'clf.pk1')
-        return clf
+        print('make CLF time: ' + str(getCLFTime - start))
+        dump(self.clf, 'clf.pk1')
+        dump(self.pca, 'pca.pk1')
 
-    def readCLF(self):
-        start = datetime.now()
-        clf = load('clf.pk1')
-        loadCLFTime = datetime.now()
-        print('load CLF time: ' + str(loadCLFTime - start))
-
-        return clf
+    def readCLFandPCA(self):
+        self.clf = load('clf.pk1')
+        self.pca = load('pca.pk1')
 
     def getAcutance(self, image):
         if(type(image) == Image): img = self.getROI(image.img)
@@ -271,23 +239,23 @@ class FabricDetector:
             trainNP2D = notPresArr[:i] + notPresArr[i+1:]
             trainNotPres = [item for sublist in trainNP2D for item in sublist]
             print(testPres)
-            print('\n')
             print(testNotPres)
-            print('\n')
             time = datetime.now()
             print('making clfs '+ str(time))
-            self.clf = self.makeCLF(trainPres, trainNotPres)
+            self.makeCLFandPCA(trainPres, trainNotPres)
+            # self.clf = self.readCLFandPCA()
             print("predicting")
-            for image in testPres:
-                prediction, avg = self.predictPresence(image)
-                print(image.fileName, prediction, avg)
-                results_p.append((image.fileName, prediction, avg))
-            for image in testNotPres:
-                prediction, avg = self.predictPresence(image)
-                print(image.fileName, prediction, avg)
-                results_np.append((image.fileName, prediction, avg))
+            predictions = self.predictPresence(testPres)
+            print(predictions)
+            for prediction in predictions:
+                print(prediction)
+                results_p.append(prediction)
+            predictions = self.predictPresence(testNotPres)
+            for prediction in predictions:
+                print(prediction)
+                results_np.append(prediction)
             i+=1
-        path = os.path.join(self.package_dir, 'wiener.txt')
+        path = os.path.join(self.package_dir, 'PCA4.txt')
         with open(path, 'w') as f:
             f.write('present\n')
             for prediction in results_p:
@@ -332,7 +300,6 @@ class FabricDetector:
             for i in range(0, len(hist)):
                 sheet.write(i+1, col, hist[i])
             col = col + 1
-
         wb.close()
         
     
