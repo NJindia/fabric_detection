@@ -1,17 +1,14 @@
 import cv2
 import numpy as np
 import os
-import sys
 from matplotlib import pyplot as plt
 from scipy.ndimage.measurements import maximum
 from skimage.feature import hog
-from skimage import data, exposure
 from sklearn import svm
 from sklearn.decomposition import PCA
 from joblib import load, dump
 from datetime import datetime
-from skimage import color, data, restoration
-from numpy.fft import fft2, ifft2
+from skimage import color, restoration
 import xlsxwriter
 
 
@@ -27,7 +24,6 @@ class Image:
         return self.fileName
 
 class FabricDetector:    
-    
     def getImages(self, parent_folder_path):
         imgs = []
         for f in os.listdir(parent_folder_path):
@@ -76,7 +72,7 @@ class FabricDetector:
         for i in range(0, 360, 15):
             image_center = tuple(np.array(img.shape[1::-1]) / 2)
             rot_mat = cv2.getRotationMatrix2D(image_center, i, 1.0)
-            rotation = cv2.warpAffine(img, rot_mat, img.shape[1::-1], flags=cv2.INTER_LINEAR)        
+            rotation = cv2.warpAffine(img, rot_mat, img.shape[1::-1], flags=cv2.INTER_LINEAR)
             roi = self.getROI(rotation)
             rotations.append(roi)
         return rotations
@@ -99,7 +95,6 @@ class FabricDetector:
         v=v.astype(np.uint8)
         hsvNew = cv2.merge((h, s, v))
         final = cv2.cvtColor(hsvNew, cv2.COLOR_HSV2BGR)
- 
         # cv2.imshow('final', final)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
@@ -111,15 +106,17 @@ class FabricDetector:
             sum = 0
             pred = 0
             hists = []
-            rotations = self.getRotations(image.img)
-            for rotation in rotations:
-                split = self.splitImg(rotation)
-                for img in split:
-                    hist = self.getHOG(img)
-                    hists.append(hist)
+            roi = self.getROI(image.img)
+            split = self.splitImg(roi)            
+            for img in split:
+                hist = self.getHOG(img)
+                hists.append(hist)
             avgHist = self.getAvgHist(hists)
-            PCA_hist = self.pca.transform(avgHist.reshape(1, -1))
-            pred = self.clf.predict(PCA_hist)
+            avgHistPCA = self.pca.transform(avgHist.reshape(1, -1))
+            # predictionData = []
+            # for i in range(len(hists)):
+            #     predictionData.append(np.concatenate((histsPCA[i], avgHistPCA)))
+            pred = self.clf.predict(avgHistPCA)
             predictions.append([image.fileName, pred])
         return predictions #fileName, prediction, avg
 
@@ -129,33 +126,36 @@ class FabricDetector:
         y = []
         for image in present:
             rotations = self.getRotations(image.img)
-            hists = []
             for rotation in rotations:
+                hists = []
                 split = self.splitImg(rotation)
                 for img in split:
                     hist = self.getHOG(img)
                     hists.append(hist)
-            avgHist = self.getAvgHist(hists)
-            X.append(avgHist)
-            y.append(1)
+                avgHist = self.getAvgHist(hists)
+                X.append(avgHist)
+                y.append(1)
         for image in notPresent:
             rotations = self.getRotations(image.img)
-            hists = []
             for rotation in rotations:
+                hists = []
                 split = self.splitImg(rotation)
                 for img in split:
                     hist = self.getHOG(img)
                     hists.append(hist)
-            avgHist = self.getAvgHist(hists)
-            X.append(avgHist)
-            y.append(0)
+                avgHist = self.getAvgHist(hists)
+                X.append(avgHist)
+                y.append(0)
         self.clf = svm.SVC()
         if(X == [] or y == []): return
-        X = np.array(X)
-        self.pca = PCA(4)# adjust yourself
-        self.pca.fit(X)
-        X_train = self.pca.transform(X)
-        self.clf.fit(X_train, y)
+        self.pca = PCA(3)
+        X_PCA = self.pca.fit_transform(X)
+        X_PCA = np.array(X_PCA)
+        # trainData = []
+        # for i in range(len(histPCA)):
+        #     concat = np.concatenate((histPCA[i]))
+        #     trainData.append(concat)
+        self.clf.fit(X_PCA, y)
         getCLFTime = datetime.now()
         print('make CLF time: ' + str(getCLFTime - start))
         dump(self.clf, 'clf.pk1')
