@@ -2,13 +2,11 @@ import cv2
 import numpy as np
 import os
 from matplotlib import pyplot as plt
-from scipy.ndimage.measurements import maximum
-from skimage.feature import hog
+from skimage.feature import hog, greycoprops, greycomatrix
 from sklearn import svm
 from sklearn.decomposition import PCA
 from joblib import load, dump
 from datetime import datetime
-from skimage import color, restoration
 import xlsxwriter
 
 
@@ -103,7 +101,6 @@ class FabricDetector:
     def predictPresence(self, images):
         predictions = []
         for image in images:
-            sum = 0
             pred = 0
             hists = []
             roi = self.getROI(image.img)
@@ -112,13 +109,21 @@ class FabricDetector:
                 hist = self.getHOG(img)
                 hists.append(hist)
             avgHist = self.getAvgHist(hists)
-            avgHistPCA = self.pca.transform(avgHist.reshape(1, -1))
-            # predictionData = []
-            # for i in range(len(hists)):
-            #     predictionData.append(np.concatenate((histsPCA[i], avgHistPCA)))
-            pred = self.clf.predict(avgHistPCA)
+            grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                levels=256)
+            gcp = greycoprops(gcm, prop='dissimilarity')[0]
+            trainArr = np.concatenate((avgHist, gcp))
+
+            PCA = self.pca.transform(trainArr.reshape(1, -1))
+            pred = self.clf.predict(PCA)
             predictions.append([image.fileName, pred])
-        return predictions #fileName, prediction, avg
+
+            #DEBUG
+            dist = self.clf.decision_function(PCA)
+            self.dists[image.filename] = dist
+            print(image.fileName, dist)
+        return predictions
 
     def makeCLFandPCA(self, present, notPresent):
         start = datetime.now()
@@ -133,7 +138,14 @@ class FabricDetector:
                     hist = self.getHOG(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-                X.append(avgHist)
+
+                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
+                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                    levels=256)
+                gcp = greycoprops(gcm, prop='dissimilarity')[0]
+                trainArr = np.concatenate((avgHist, gcp))
+
+                X.append(trainArr)
                 y.append(1)
         for image in notPresent:
             rotations = self.getRotations(image.img)
@@ -144,17 +156,20 @@ class FabricDetector:
                     hist = self.getHOG(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-                X.append(avgHist)
+
+                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
+                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                    levels=256)
+                gcp = greycoprops(gcm, prop='dissimilarity')[0]
+                trainArr = np.concatenate((avgHist, gcp))
+
+                X.append(trainArr)
                 y.append(0)
         self.clf = svm.SVC()
         if(X == [] or y == []): return
         self.pca = PCA(3)
         X_PCA = self.pca.fit_transform(X)
         X_PCA = np.array(X_PCA)
-        # trainData = []
-        # for i in range(len(histPCA)):
-        #     concat = np.concatenate((histPCA[i]))
-        #     trainData.append(concat)
         self.clf.fit(X_PCA, y)
         getCLFTime = datetime.now()
         print('make CLF time: ' + str(getCLFTime - start))
@@ -164,21 +179,6 @@ class FabricDetector:
     def readCLFandPCA(self):
         self.clf = load('clf.pk1')
         self.pca = load('pca.pk1')
-
-    def getAcutance(self, image):
-        if(type(image) == Image): img = self.getROI(image.img)
-        else: img = image
-        lbound = 25
-        ubound = 150
-        edges = cv2.Canny(img,lbound,ubound) 
-        acutance = np.mean(edges)
-        return acutance
-
-    def focusImages(self, images):
-        for image in images:
-            acutance = self.getAcutance(image)
-            if(acutance < self.acutance_thresh):
-                image.img = self.wiener(image)
 
     def kfold_present(self, presImages, notPresImages):
         colors = []
@@ -233,14 +233,11 @@ class FabricDetector:
                 print(prediction)
                 results_np.append(prediction)
             i+=1
-        path = os.path.join(self.package_dir, 'PCA4Avg.txt')
+        path = os.path.join(self.package_dir, 'GLCM.txt')
         with open(path, 'w') as f:
-            f.write('present\n')
-            for prediction in results_p:
-                f.write('%s %s %s\n' % (prediction[0], prediction[1]))
-            f.write('not present\n')
-            for prediction in results_np:
-                f.write('%s %s %s\n' % (prediction[0], prediction[1]))        
+            f.write('dists\n')
+            for key in self.dists:
+                f.write('%s %s\n' % (key, self.dists[key]))      
         
     def getAvgHist(self, hists):
         sum = np.full(len(hists[0]), 0)
@@ -250,86 +247,10 @@ class FabricDetector:
         average = np.divide(sum, divisor)
         return average
 
-    def writeHOGsToFile(self, images):
-        averages = {}
-        for image in images:
-            hists = []
-            rotations = self.getRotations(image.img)
-            for rotation in rotations:
-                split = self.splitImg(rotation)
-                # split = self.splitImg(self.getROI(image.img))
-                for im in split:
-                    hist = self.getHOG(im)
-                    hists.append(hist)
-            average = self.getAvgHist(hists)
-            averages[image.fileName] = average
-
-        path = os.path.join(self.package_dir,'HOGs2/', 'avgHistsPR2.xlsx')
-        wb = xlsxwriter.Workbook(path)
-        sheet = wb.add_worksheet()
-        sheet.write(0, 0, 'Bin')
-        for k in range(1, 37):
-            sheet.write(k, 0, k)
-
-        col = 1
-        for key in averages:
-            hist = averages[key]
-            sheet.write(0, col, key)
-            for i in range(0, len(hist)):
-                sheet.write(i+1, col, hist[i])
-            col = col + 1
-        wb.close()
-        
-    
-    # Gaussian kernel generation function
-    def creat_gauss_kernel(self, kernel_size=3, sigma=1, k=1):
-        if sigma == 0:
-            sigma = ((kernel_size - 1) * 0.5 - 1) * 0.3 + 0.8
-        X = np.linspace(-k, k, kernel_size)
-        Y = np.linspace(-k, k, kernel_size)
-        x, y = np.meshgrid(X, Y)
-        x0 = 0
-        y0 = 0
-        gauss = 1/(2*np.pi*sigma**2) * np.exp(- ((x -x0)**2 + (y - y0)**2)/ (2 * sigma**2))
-        gaussian = gauss/(np.sum(gauss))
-        return gaussian
-
-
-    def wiener(self, image):
-        img = image.img
-        og = img
-        before = self.getAcutance(img)  
-        # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img = color.rgb2gray(img)
-        i = 5
-        psf = self.creat_gauss_kernel(sigma=i)
-        deconvolved, _ = restoration.unsupervised_wiener(img, psf)
-        deconvolved = (deconvolved*255).astype(np.uint8)
-        print(image.fileName, before, self.getAcutance(deconvolved))
-
-        # fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(8, 5),
-        #                     sharex=True, sharey=True)
-
-        # plt.gray()
-
-        # ax[0].imshow(img)
-        # ax[0].axis('off')
-        # ax[0].set_title(image.fileName)
-
-        # ax[1].imshow(deconvolved)
-        # ax[1].axis('off')
-        # ax[1].set_title(str(j))
-
-        # fig.tight_layout()
-
-        # plt.show()
-            
-        return deconvolved
-
     def __init__(self):
         # np.set_printoptions(threshold=sys.maxsize)
         start = datetime.now()
-        self.acutance_thresh = 5
+        self.dists = {}
         self.package_dir = os.path.dirname(os.path.abspath(__file__))
         trainPresImgs = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
         trainNotPresImgs = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
