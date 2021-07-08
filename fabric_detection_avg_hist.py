@@ -7,7 +7,6 @@ from sklearn import svm
 from sklearn.decomposition import PCA
 from joblib import load, dump
 from datetime import datetime
-import xlsxwriter
 
 
 class Image:
@@ -110,25 +109,27 @@ class FabricDetector:
                 hists.append(hist)
             avgHist = self.getAvgHist(hists)
             grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-            gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
-                levels=256)
+            gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],levels=256)
             gcp = greycoprops(gcm, prop='dissimilarity')[0]
-            trainArr = np.concatenate((avgHist, gcp))
-
+            gcpNormalized = self.normalizeArr(gcp, min=self.GLCMmin, max = self.GLCMmax)
+            avgHistNormalized = self.normalizeArr(avgHist, min=self.HOGmin, max=self.HOGmax)
+            trainArr = np.concatenate((avgHistNormalized, gcpNormalized))
+            # trainArr = avgHist
+            # trainArr = gcp
+            
             PCA = self.pca.transform(trainArr.reshape(1, -1))
             pred = self.clf.predict(PCA)
             predictions.append([image.fileName, pred])
 
             #DEBUG
             dist = self.clf.decision_function(PCA)
-            self.dists[image.filename] = dist
+            self.dists[image.fileName] = dist
             print(image.fileName, dist)
         return predictions
 
     def makeCLFandPCA(self, present, notPresent):
         start = datetime.now()
-        X = []
-        y = []
+        trainData = []
         for image in present:
             rotations = self.getRotations(image.img)
             for rotation in rotations:
@@ -142,11 +143,8 @@ class FabricDetector:
                 grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
                 gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
                     levels=256)
-                gcp = greycoprops(gcm, prop='dissimilarity')[0]
-                trainArr = np.concatenate((avgHist, gcp))
-
-                X.append(trainArr)
-                y.append(1)
+                glcm = greycoprops(gcm, prop='dissimilarity')[0]
+                trainData.append([avgHist, glcm, 1])
         for image in notPresent:
             rotations = self.getRotations(image.img)
             for rotation in rotations:
@@ -160,11 +158,24 @@ class FabricDetector:
                 grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
                 gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
                     levels=256)
-                gcp = greycoprops(gcm, prop='dissimilarity')[0]
-                trainArr = np.concatenate((avgHist, gcp))
+                glcm = greycoprops(gcm, prop='dissimilarity')[0]
+                trainData.append([avgHist, glcm, 0])
+        
+        avgHists = []
+        GLCMs = []
+        y = []
+        for i in range(len(trainData)):
+            avgHists.append(trainData[i][0])
+            GLCMs.append(trainData[i][1])
+            y.append(trainData[i][2])
+        avgHistsNormal, self.HOGmin, self.HOGmax = self.normalizeArr(avgHists)
+        GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
+        X = []
+        avgHistsNormal = np.array(avgHistsNormal)
+        GLCMsNormal = np.array(GLCMsNormal)
+        for i in range(len(avgHistsNormal)):
+            X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
 
-                X.append(trainArr)
-                y.append(0)
         self.clf = svm.SVC()
         if(X == [] or y == []): return
         self.pca = PCA(3)
@@ -223,15 +234,8 @@ class FabricDetector:
             self.makeCLFandPCA(trainPres, trainNotPres)
             # self.clf = self.readCLFandPCA()
             print("predicting")
-            predictions = self.predictPresence(testPres)
-            print(predictions)
-            for prediction in predictions:
-                print(prediction)
-                results_p.append(prediction)
-            predictions = self.predictPresence(testNotPres)
-            for prediction in predictions:
-                print(prediction)
-                results_np.append(prediction)
+            self.predictPresence(testPres)
+            self.predictPresence(testNotPres)
             i+=1
         path = os.path.join(self.package_dir, 'GLCM.txt')
         with open(path, 'w') as f:
@@ -239,6 +243,18 @@ class FabricDetector:
             for key in self.dists:
                 f.write('%s %s\n' % (key, self.dists[key]))      
         
+    def normalizeArr(self, values, min = None, max = None):
+        vals = np.copy(values)
+        returnMins = False
+        if(min is None or max is None):
+            max = np.amax(vals)
+            min = np.amin(vals)
+            returnMins = True
+        for i in range(len(vals)):
+            vals[i] = (vals[i] - min)/(max - min)
+        if(returnMins == True): return vals, min, max
+        else: return vals
+
     def getAvgHist(self, hists):
         sum = np.full(len(hists[0]), 0)
         for hist in hists:
