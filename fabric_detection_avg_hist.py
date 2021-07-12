@@ -108,14 +108,14 @@ class FabricDetector:
                 hist = self.getHOG(img)
                 hists.append(hist)
             avgHist = self.getAvgHist(hists)
-            grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-            gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],levels=256)
-            gcp = greycoprops(gcm, prop='dissimilarity')[0]
-            gcpNormalized = self.normalizeArr(gcp, min=self.GLCMmin, max = self.GLCMmax)
+            # grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],levels=256)
+            # gcp = greycoprops(gcm, prop='dissimilarity')[0]
+            # gcpNormalized = self.normalizeArr(gcp, min=self.GLCMmin, max = self.GLCMmax)
             avgHistNormalized = self.normalizeArr(avgHist, min=self.HOGmin, max=self.HOGmax)
-            trainArr = np.concatenate((avgHistNormalized, gcpNormalized))
-            # trainArr = avgHist
-            # trainArr = gcp
+            # trainArr = np.concatenate((avgHistNormalized, gcpNormalized))
+            trainArr = avgHistNormalized
+            # trainArr = gcpNormalized
             
             PCA = self.pca.transform(trainArr.reshape(1, -1))
             pred = self.clf.predict(PCA)
@@ -169,12 +169,13 @@ class FabricDetector:
             GLCMs.append(trainData[i][1])
             y.append(trainData[i][2])
         avgHistsNormal, self.HOGmin, self.HOGmax = self.normalizeArr(avgHists)
-        GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
+        # GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
         X = []
         avgHistsNormal = np.array(avgHistsNormal)
-        GLCMsNormal = np.array(GLCMsNormal)
-        for i in range(len(avgHistsNormal)):
-            X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
+        # GLCMsNormal = np.array(GLCMsNormal)
+        # for i in range(len(avgHistsNormal)):
+        #     X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
+        X = avgHistsNormal
 
         self.clf = svm.SVC()
         if(X == [] or y == []): return
@@ -244,14 +245,13 @@ class FabricDetector:
                 f.write('%s %s\n' % (key, self.dists[key]))      
         
     def normalizeArr(self, values, min = None, max = None):
-        vals = np.copy(values)
+        vals = np.array(values, copy=True, dtype=np.float)
         returnMins = False
         if(min is None or max is None):
             max = np.amax(vals)
             min = np.amin(vals)
             returnMins = True
-        for i in range(len(vals)):
-            vals[i] = (vals[i] - min)/(max - min)
+        vals = (vals - min)/(max - min)
         if(returnMins == True): return vals, min, max
         else: return vals
 
