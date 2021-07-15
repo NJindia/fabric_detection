@@ -3,9 +3,11 @@ import numpy as np
 import os
 from matplotlib import pyplot as plt
 from skimage.feature import hog, greycoprops, greycomatrix
+from sklearn.preprocessing import StandardScaler
 from sklearn import svm
 from sklearn.decomposition import PCA
 from joblib import load, dump
+import mahotas as mt
 from datetime import datetime
 
 
@@ -108,16 +110,21 @@ class FabricDetector:
                 hist = self.getHOG(img)
                 hists.append(hist)
             avgHist = self.getAvgHist(hists)
-            # grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            
+            grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
             # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],levels=256)
             # gcp = greycoprops(gcm, prop='dissimilarity')[0]
+            haralick = self.extractHaralickFeats(grey)
+
             # gcpNormalized = self.normalizeArr(gcp, min=self.GLCMmin, max = self.GLCMmax)
+            haralickNormalized = self.normalizeArr(haralick, min=self.haralickMin, max = self.haralickMax)
             avgHistNormalized = self.normalizeArr(avgHist, min=self.HOGmin, max=self.HOGmax)
-            # trainArr = np.concatenate((avgHistNormalized, gcpNormalized))
-            trainArr = avgHistNormalized
-            # trainArr = gcpNormalized
             
-            PCA = self.pca.transform(trainArr.reshape(1, -1))
+            predArr = np.concatenate((avgHistNormalized, haralickNormalized))
+            # predArr = avgHistNormalized
+            predArr = predArr.reshape(1, -1)
+
+            PCA = self.pca.transform(predArr)
             pred = self.clf.predict(PCA)
             predictions.append([image.fileName, pred])
 
@@ -139,12 +146,13 @@ class FabricDetector:
                     hist = self.getHOG(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-
                 grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
-                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
-                    levels=256)
-                glcm = greycoprops(gcm, prop='dissimilarity')[0]
-                trainData.append([avgHist, glcm, 1])
+                # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                #     levels=256)
+                # glcm = greycoprops(gcm, prop='dissimilarity')[0]
+                haralick = self.extractHaralickFeats(grey)
+
+                trainData.append([avgHist, haralick, 1])
         for image in notPresent:
             rotations = self.getRotations(image.img)
             for rotation in rotations:
@@ -154,32 +162,35 @@ class FabricDetector:
                     hist = self.getHOG(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-
                 grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
-                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
-                    levels=256)
-                glcm = greycoprops(gcm, prop='dissimilarity')[0]
-                trainData.append([avgHist, glcm, 0])
-        
+                # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                #     levels=256)
+                # glcm = greycoprops(gcm, prop='dissimilarity')[0]
+                haralick = self.extractHaralickFeats(grey)
+
+                trainData.append([avgHist, haralick, 0])
         avgHists = []
-        GLCMs = []
+        haralickFeats = []
         y = []
         for i in range(len(trainData)):
             avgHists.append(trainData[i][0])
-            GLCMs.append(trainData[i][1])
+            haralickFeats.append(trainData[i][1])
             y.append(trainData[i][2])
         avgHistsNormal, self.HOGmin, self.HOGmax = self.normalizeArr(avgHists)
         # GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
+        haralickFeatsNormal, self.haralickMin, self.haralickMax = self.normalizeArr(haralickFeats)
         X = []
         avgHistsNormal = np.array(avgHistsNormal)
-        # GLCMsNormal = np.array(GLCMsNormal)
-        # for i in range(len(avgHistsNormal)):
-        #     X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
-        X = avgHistsNormal
+        haralickFeatsNormal = np.array(haralickFeatsNormal)
+        for i in range(len(avgHistsNormal)):
+            X.append(np.concatenate((avgHistsNormal[i], haralickFeatsNormal[i])))
+        # X = avgHistsNormal
+        X = np.array(X)
+        # self.eigen(X)
 
-        self.clf = svm.SVC()
+        self.clf = svm.SVC(C=.8)
         if(X == [] or y == []): return
-        self.pca = PCA(3)
+        self.pca = PCA(n_components=6)
         X_PCA = self.pca.fit_transform(X)
         X_PCA = np.array(X_PCA)
         self.clf.fit(X_PCA, y)
@@ -187,6 +198,35 @@ class FabricDetector:
         print('make CLF time: ' + str(getCLFTime - start))
         dump(self.clf, 'clf.pk1')
         dump(self.pca, 'pca.pk1')
+
+    def extractHaralickFeats(self, img):
+        # calculate haralick texture features for 4 types of adjacency
+        textures = mt.features.haralick(img)
+
+        # take the mean of it and return it
+        ht_mean = textures.mean(axis=0)
+        return ht_mean
+
+    # @X_train IS 2D
+    def eigen(self, X_train):
+        sc = StandardScaler()
+        X_train_std = sc.fit_transform(X_train)
+        cov_mat = np.cov(X_train_std.T)
+        eigen_vals, eigen_vecs = np.linalg.eig(cov_mat)
+        # calculate cumulative sum of explained variances
+        tot = sum(eigen_vals)
+        var_exp = [(i / tot) for i in sorted(eigen_vals, reverse=True)]
+        cum_var_exp = np.cumsum(var_exp)
+
+        # plot explained variances
+        plt.bar(range(1,X_train.shape[1]+1), var_exp, alpha=0.5,
+                align='center', label='individual explained variance')
+        plt.step(range(1,X_train.shape[1]+1), cum_var_exp, where='mid',
+                label='cumulative explained variance')
+        plt.ylabel('Explained variance ratio')
+        plt.xlabel('Principal component index')
+        plt.legend(loc='best')
+        plt.show()
 
     def readCLFandPCA(self):
         self.clf = load('clf.pk1')
@@ -224,6 +264,7 @@ class FabricDetector:
         while(i < len(colors) and i < len(notPresArr)):
             testPres = colors[i]
             trainP2D = colors[:i] + colors[i+1:]
+            trainP2D = colors #TODO DELETE
             trainPres = [item for sublist in trainP2D for item in sublist]
             testNotPres = notPresArr[i]
             trainNP2D = notPresArr[:i] + notPresArr[i+1:]

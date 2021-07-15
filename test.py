@@ -5,7 +5,9 @@ import cv2
 from joblib import load, dump
 from sklearn import svm
 from sklearn.decomposition import PCA
-from skimage.feature import hog, greycomatrix, greycoprops
+from skimage.feature import hog, greycomatrix, greycoprops, local_binary_pattern
+import datetime
+import mahotas as mt
 
 
 
@@ -93,77 +95,103 @@ class FabricDetector:
         dist = self.clf.decision_function(avgHistsPCA)
         return dist
 
-    def increaseContrast(self, img):
-        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
+    def makeCLFandPCA(self, present, notPresent):
+        start = datetime.now()
+        trainData = []
+        for image in present:
+            rotations = self.getRotations(image.img)
+            for rotation in rotations:
+                hists = []
+                split = self.splitImg(rotation)
+                for img in split:
+                    hist = self.getHOG(img)
+                    hists.append(hist)
+                avgHist = self.getAvgHist(hists)
 
-        # -----Applying CLAHE to L-channel-------------------------------------------
-        clahe = cv2.createCLAHE(clipLimit=1000.0, tileGridSize=(8, 8))
-        cl = clahe.apply(l)
+                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
+                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                    levels=256)
+                glcm = greycoprops(gcm, prop='dissimilarity')[0]
+                trainData.append([avgHist, glcm, 1])
+        for image in notPresent:
+            rotations = self.getRotations(image.img)
+            for rotation in rotations:
+                hists = []
+                split = self.splitImg(rotation)
+                for img in split:
+                    hist = self.getHOG(img)
+                    hists.append(hist)
+                avgHist = self.getAvgHist(hists)
 
-        # -----Merge the CLAHE enhanced L-channel with the a and b channel-----------
-        limg = cv2.merge((cl, a, b))
+                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
+                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                    levels=256)
+                glcm = greycoprops(gcm, prop='dissimilarity')[0]
+                trainData.append([avgHist, glcm, 0])
+        
+        avgHists = []
+        GLCMs = []
+        y = []
+        for i in range(len(trainData)):
+            avgHists.append(trainData[i][0])
+            GLCMs.append(trainData[i][1])
+            y.append(trainData[i][2])
+        avgHistsNormal, self.HOGmin, self.HOGmax = self.normalizeArr(avgHists)
+        # GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
+        X = []
+        avgHistsNormal = np.array(avgHistsNormal)
+        # GLCMsNormal = np.array(GLCMsNormal)
+        # for i in range(len(avgHistsNormal)):
+        #     X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
+        X = avgHistsNormal
 
-        # -----Converting image from LAB Color model to RGB model--------------------
-        final = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
-        return final
+        self.clf = svm.SVC()
+        if(X == [] or y == []): return
+        self.pca = PCA(5)
+        X_PCA = self.pca.fit_transform(X)
+        X_PCA = np.array(X_PCA)
+        self.clf.fit(X_PCA, y)
+        getCLFTime = datetime.now()
+        print('make CLF time: ' + str(getCLFTime - start))
+        dump(self.clf, 'clf.pk1')
+        dump(self.pca, 'pca.pk1')
+   
+    def getRotations(self, img):
+        rotations = []
+        for i in range(0, 360, 15):
+            image_center = tuple(np.array(img.shape[1::-1]) / 2)
+            rot_mat = cv2.getRotationMatrix2D(image_center, i, 1.0)
+            rotation = cv2.warpAffine(img, rot_mat, img.shape[1::-1], flags=cv2.INTER_LINEAR)
+            roi = self.getROI(rotation)
+            rotations.append(roi)
+        return rotations
 
+    def extractHaralickFeats(self, img):
+        # calculate haralick texture features for 4 types of adjacency
+        textures = mt.features.haralick(img)
 
-    def detectLines(self, img):
-        img = self.increaseContrast(img)
+        # take the mean of it and return it
+        ht_mean = textures.std(axis=0)
+        return ht_mean
 
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        kernel_size = 19
-        gaussian = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)  # GOOD! Reduces noise
-        low_threshold = 50
-        high_threshold = 150
-
-        edges = cv2.Canny(gaussian, low_threshold, high_threshold)
-
-        rho = 1  # distance resolution in pixels of the Hough grid
-        theta = np.pi / 180  # angular resolution in radians of the Hough grid #####TODO? CHECK IF YOU CAN GO IN A CERTAIN ORIENTATION
-        threshold = 10  # minimum number of votes (intersections in Hough grid cell)
-        min_line_length = 150  # minimum number of pixels making up a line
-        max_line_gap = 15  # maximum gap in pixels between connectable line segments
-        line_image = np.copy(gaussian) * 0  # creating a blank to draw lines on
-
-        # Run Hough on edge detected image
-        # Output "lines" is an array containing endpoints of detected line segments
-        lines = cv2.HoughLinesP(edges, rho, theta, threshold,
-                                np.array([]), min_line_length, max_line_gap)
-        angles = []
-
-        # BLACK MAGIC BREAKS CODE DO NOT COMBINE
-        if lines is not None:
-            for line in lines:
-                for x1, y1, x2, y2 in line:
-                    angle = np.rad2deg(np.arctan2(y1 - y2, x1 - x2))
-                    angles.append(angle)
-        if lines is not None:
-            # lines = self.checkLines(lines, angles)
-            for line in lines:
-                for x1, y1, x2, y2 in line:
-                    cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 5)
-        cv2.imshow('lines', line_image)
-        cv2.waitKey(0)
-        return lines
-
-    def checkLines(self, lines, angles):
-        filteredLines = []
-        i = 0
-
-        for angle in angles:
-            good_angles = 0
-            for angle2 in angles:
-                if abs(angle2 - angle) < 30:  # 30 DEG THRESHOLD
-                    good_angles = good_angles+1
-            if(good_angles/len(angles) > .6 ):  # 60% THRESHOLD
-                filteredLines.append(lines[i])
-            i = i+1
-        print(len(lines))
-        print(len(filteredLines))
-        return filteredLines
-
+    def texture_detect(self, images):
+        radius = 1
+        n_point = 1
+        train_hist = []
+        for image in images:
+            grey = cv2.cvtColor(image.img, cv2.COLOR_BGR2GRAY)
+            #Use the LBP method to extract the texture features of the image.
+            lbp=local_binary_pattern(grey,n_point,radius,'default')
+            cv2.imshow(image.fileName, lbp)
+            cv2.waitKey(0)
+            #Statistic image histogram
+            #hist size:256
+            max_bins = 36
+            hist = np.histogram(lbp, normed=True, bins=max_bins, range=(0, max_bins))
+            print(image.fileName, hist)
+            train_hist.append(hist)
+        return train_hist
+        
     def __init__(self):
         package_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -176,15 +204,26 @@ class FabricDetector:
         # print(dist)
         pres = self.getImages(os.path.join(package_dir,'images/SVM_training_present'))
         notPres = self.getImages(os.path.join(package_dir,'images/SVM_training_not_present'))
+        # self.texture_detect(pres)
+        # self.texture_detect(notPres)
         for image in pres:
-            img = self.getROI(image.img)
-            lines = self.detectLines(img)
-            print(image.fileName, lines)
+            rotations = self.getRotations(image.img)
+            for rotation in rotations:
+                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
+                # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                #     levels=256)
+                # glcm = greycoprops(gcm, prop='ASM')[0]
+                feat = self.extractHaralickFeats(grey)
+                print(image.fileName, feat)
         print('not pres')
         for image in notPres:
-            img = self.getROI(image.img)
-
-            lines = self.detectLines(image)
-            print(image.fileName, lines)
+            rotations = self.getRotations(image.img)
+            for rotation in rotations:
+                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
+                # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                #     levels=256)
+                # glcm = greycoprops(gcm, prop='ASM')[0]
+                feat = self.extractHaralickFeats(grey)
+                print(image.fileName, feat)
 if __name__ == '__main__':
     fd = FabricDetector()
