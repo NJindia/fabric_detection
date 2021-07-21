@@ -1,11 +1,18 @@
+import pickle
+from sys import path
 import cv2
+from time import time
+from mahotas import features
 import numpy as np
 import os
 from matplotlib import pyplot as plt
+from numpy.lib.polynomial import poly
+from skimage import feature, exposure
 from skimage.feature import hog, greycoprops, greycomatrix
 from sklearn.preprocessing import StandardScaler
-from sklearn import svm
+from sklearn.svm import SVC, LinearSVC
 from sklearn.decomposition import PCA
+from sklearn.model_selection import GridSearchCV
 from joblib import load, dump
 import mahotas as mt
 from datetime import datetime
@@ -33,10 +40,6 @@ class FabricDetector:
                 # imgEq = self.shiftHist(roi)
                 imgEq = roi
                 image = Image(img=imgEq, fileName=f, path=path)
-                # acutance = self.getAcutance(image)
-                # print('OG: ', f, acutance)
-                # acutance = self.getAcutance(imgEq)
-                # print('SHIFT: ', f, acutance)
                 imgs.append(image)
         return imgs
 
@@ -102,26 +105,28 @@ class FabricDetector:
     def predictPresence(self, images):
         predictions = []
         for image in images:
-            pred = 0
-            hists = []
+            # hists = []
             roi = self.getROI(image.img)
-            split = self.splitImg(roi)            
-            for img in split:
-                hist = self.getHOG(img)
-                hists.append(hist)
-            avgHist = self.getAvgHist(hists)
+            # split = self.splitImg(roi)            
+            # for img in split:
+            #     hist = self.getHOG(img)
+            #     hists.append(hist)
+            # avgHist = self.getAvgHist(hists)
+            index = image.fileName + '0' #DEBUG
+            avgHist = self.features[index][0] #DEBUG
+            glcm = self.features[index][1]
+            haralick = self.features[index][2]
             
-            grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            # grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
             # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],levels=256)
             # gcp = greycoprops(gcm, prop='dissimilarity')[0]
-            haralick = self.extractHaralickFeats(grey)
+            # haralick = self.extractHaralickFeats(grey)
 
             # gcpNormalized = self.normalizeArr(gcp, min=self.GLCMmin, max = self.GLCMmax)
             haralickNormalized = self.normalizeArr(haralick, min=self.haralickMin, max = self.haralickMax)
             avgHistNormalized = self.normalizeArr(avgHist, min=self.HOGmin, max=self.HOGmax)
-            
-            predArr = np.concatenate((avgHistNormalized, haralickNormalized))
-            # predArr = avgHistNormalized
+            # predArr = np.concatenate((avgHistNormalized, haralickNormalized))
+            predArr = avgHistNormalized
             predArr = predArr.reshape(1, -1)
 
             PCA = self.pca.transform(predArr)
@@ -134,70 +139,165 @@ class FabricDetector:
             print(image.fileName, dist)
         return predictions
 
+    def scoreDists(self):
+        currColor = ''
+        colorDict = {}
+        distDict = {}
+        colorArr = []
+        not_present_arr = []
+        for key in self.dists:   
+            if(key.split()[0] == 'not_present'):
+                not_present_arr.append(self.dists[key])
+                continue
+            newColor = key.split()[0]
+            if(currColor != newColor): 
+                if(currColor == ''):
+                    currColor = newColor
+                else:
+                    colorArr = np.array(colorArr)
+                    colorDict['mean'] = np.mean(colorArr)
+                    colorDict['std'] = np.std(colorArr)
+                    colorDict['min'] = np.min(colorArr)
+                    colorDict['max'] = np.max(colorArr)
+                    colorDict['n'] = len(colorArr)
+                    distDict[currColor] = colorDict
+                    currColor = newColor
+                    colorDict = {}
+                    colorArr = []
+            colorArr.append(self.dists[key])
+        colorArr = np.array(colorArr)
+        colorDict['mean'] = np.mean(colorArr)
+        colorDict['std'] = np.std(colorArr)
+        colorDict['min'] = np.min(colorArr)
+        colorDict['max'] = np.max(colorArr)
+        colorDict['n'] = len(colorArr)
+        distDict[currColor] = colorDict
+        colorDict = {}
+        not_present_arr = np.array(not_present_arr)
+        colorDict['mean'] = np.mean(not_present_arr)
+        colorDict['std'] = np.std(not_present_arr)
+        colorDict['min'] = np.min(not_present_arr)
+        colorDict['max'] = np.max(not_present_arr)
+        colorDict['n'] = len(not_present_arr)
+        distDict['not_present'] = colorDict
+
+        return distDict
+
+    def pickleFeatures(self, images):
+        feats = {}
+        for image in images:
+            print(image.fileName)
+            rotations = self.getRotations(image.img)
+            for i in range(len(rotations)):
+                rotation = rotations[i]
+                rotationEq = np.array(exposure.equalize_adapthist(cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY), clip_limit=1), dtype=np.float)
+                cv2.imshow('eq', rotationEq)
+                cv2.waitKey(0)
+                hists = []
+                split = self.splitImg(rotationEq)
+                for img in split:
+                    hist = self.getHOG(img)
+                    hists.append(hist)
+                avgHist = self.getAvgHist(hists)
+                try:
+                    rotation.shape[2]
+                    grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
+                except: grey = rotation
+                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                    levels=256)
+                glcm = greycoprops(gcm, prop='dissimilarity')[0]
+                haralick = self.extractHaralickFeats(grey)
+                index = str(image.fileName) + str(i)
+                feats[index] = [avgHist, glcm, haralick]
+        self.features = feats
+        dump(self.features, 'featuresEq.pickle')
+
     def makeCLFandPCA(self, present, notPresent):
-        start = datetime.now()
+        t0 = time()
         trainData = []
         for image in present:
-            rotations = self.getRotations(image.img)
-            for rotation in rotations:
-                hists = []
-                split = self.splitImg(rotation)
-                for img in split:
-                    hist = self.getHOG(img)
-                    hists.append(hist)
-                avgHist = self.getAvgHist(hists)
-                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
-                # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
-                #     levels=256)
-                # glcm = greycoprops(gcm, prop='dissimilarity')[0]
-                haralick = self.extractHaralickFeats(grey)
-
-                trainData.append([avgHist, haralick, 1])
+            for i in range(0, 360, 15):
+                index = str(image.fileName) + str(int(i/15))
+                avgHist = self.features[index][0]
+                glcm = self.features[index][1]
+                haralick = self.features[index][2]
+                trainData.append([avgHist, haralick, glcm, 1])
         for image in notPresent:
-            rotations = self.getRotations(image.img)
-            for rotation in rotations:
-                hists = []
-                split = self.splitImg(rotation)
-                for img in split:
-                    hist = self.getHOG(img)
-                    hists.append(hist)
-                avgHist = self.getAvgHist(hists)
-                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
-                # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
-                #     levels=256)
-                # glcm = greycoprops(gcm, prop='dissimilarity')[0]
-                haralick = self.extractHaralickFeats(grey)
-
-                trainData.append([avgHist, haralick, 0])
+            for i in range(0, 360, 15):
+                index = str(image.fileName) + str(int(i/15))
+                avgHist = self.features[index][0]
+                glcm = self.features[index][1]
+                haralick = self.features[index][2]
+                trainData.append([avgHist, haralick, glcm, 0])
         avgHists = []
         haralickFeats = []
+        GLCMs = []
         y = []
         for i in range(len(trainData)):
             avgHists.append(trainData[i][0])
             haralickFeats.append(trainData[i][1])
-            y.append(trainData[i][2])
+            GLCMs.append(trainData[i][2])
+            y.append(trainData[i][3])
         avgHistsNormal, self.HOGmin, self.HOGmax = self.normalizeArr(avgHists)
-        # GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
+        GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
         haralickFeatsNormal, self.haralickMin, self.haralickMax = self.normalizeArr(haralickFeats)
         X = []
         avgHistsNormal = np.array(avgHistsNormal)
         haralickFeatsNormal = np.array(haralickFeatsNormal)
+        GLCMsNormal = np.array(GLCMsNormal)
         for i in range(len(avgHistsNormal)):
-            X.append(np.concatenate((avgHistsNormal[i], haralickFeatsNormal[i])))
+            X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
         # X = avgHistsNormal
         X = np.array(X)
         # self.eigen(X)
 
-        self.clf = svm.SVC(C=.8)
         if(X == [] or y == []): return
         self.pca = PCA(n_components=6)
         X_PCA = self.pca.fit_transform(X)
         X_PCA = np.array(X_PCA)
+        self.gridSearch(X_PCA, y)
+        return
+        self.clf = SVC(kernel='poly', C=10)
         self.clf.fit(X_PCA, y)
-        getCLFTime = datetime.now()
-        print('make CLF time: ' + str(getCLFTime - start))
+        print('make CLF time: ' + str(time() - t0))
         dump(self.clf, 'clf.pk1')
         dump(self.pca, 'pca.pk1')
+
+
+    def gridSearch(self, X_train, y_train):
+        t0 = time()
+        print('GridSearch Start{}'.format(datetime.now()))
+        #Create a dictionary of possible parameters
+        param_grid = {'C': [1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1e0, 1e1, 1e2, 1e3, 5e3, 1e4, 5e4, 1e5],
+                        'kernel':['rbf', 'poly', 'sigmoid']
+                    }
+        #Create the GridSearchCV object
+        # grid_clf = GridSearchCV(LinearSVC(random_state=0, class_weight='balanced'), param_grid, n_jobs=1, verbose=3)
+        grid_clf = GridSearchCV(SVC(class_weight='balanced'), param_grid, n_jobs=1, cv=10, verbose=1)
+        
+        #Fit the data with the best possible parameters
+        grid_clf = grid_clf.fit(X_train, y_train)
+
+        #Print the best estimator with it's parameters
+        s1 = "done in %0.3fs" % (time() - t0)
+        s2 = 'best estimators: '
+        s3 = grid_clf.best_params_
+        s4 = grid_clf.best_score_
+        s5 = grid_clf.best_index_
+        print(s1)
+        print(s2)
+        print(s3)
+        print(s4)
+        print(s5)
+        for i in range(len(grid_clf.cv_results_['params'])):
+            print('{}: {} {}'.format(i, grid_clf.cv_results_['params'][i], grid_clf.cv_results_['mean_test_score'][i]))
+        path = os.path.join(self.package_dir, 'gridSearchResults.txt')
+        with open(path, 'a') as f:
+            f.write(
+                '{}\n{}\n{}\n{}\n{}\n'.format(s1, s2, s3, s4, s5)
+            )
+            for i in range(len(grid_clf.cv_results_['params'])):
+                f.write('{}: {} {}\n'.format(i, grid_clf.cv_results_['params'][i], grid_clf.cv_results_['mean_test_score'][i]))
 
     def extractHaralickFeats(self, img):
         # calculate haralick texture features for 4 types of adjacency
@@ -232,29 +332,24 @@ class FabricDetector:
         self.clf = load('clf.pk1')
         self.pca = load('pca.pk1')
 
-    def kfold_present(self, presImages, notPresImages):
+    def kfold(self, pres, notPres):
         colors = []
         notPresArr = []
-        #FILENAME BINPRED AVG
-        results_p = []
-        results_np = []
-        # presImages = self.focusImages(presImages)
-        # notPresImages = self.focusImages(notPresImages)
         i = 0
-        while(i < len(presImages)):
-            color = presImages[i].fileName.split()[0]
+        while(i < len(pres)):
+            currColor = pres[i].fileName.split()[0]
             colorArr = []
-            while(i < len(presImages) and presImages[i].fileName.split()[0] == color):
-                colorArr.append(presImages[i])
+            while(i < len(pres) and pres[i].fileName.split()[0] == currColor):
+                colorArr.append(pres[i])
                 i+=1
             colors.append(colorArr)
 
         i = 0
-        while(i < len(notPresImages)):
+        while(i < len(notPres)):
             j = 0
             npImageSet = []
             while(j<= 6):
-                npImageSet.append(notPresImages[i])
+                npImageSet.append(notPres[i])
                 j+=1
                 i+=1
             notPresArr.append(npImageSet)
@@ -263,7 +358,7 @@ class FabricDetector:
         i=0
         while(i < len(colors) and i < len(notPresArr)):
             testPres = colors[i]
-            trainP2D = colors[:i] + colors[i+1:]
+            # trainP2D = colors[:i] + colors[i+1:]
             trainP2D = colors #TODO DELETE
             trainPres = [item for sublist in trainP2D for item in sublist]
             testNotPres = notPresArr[i]
@@ -274,16 +369,19 @@ class FabricDetector:
             time = datetime.now()
             print('making clfs '+ str(time))
             self.makeCLFandPCA(trainPres, trainNotPres)
+            return #TODO DELETE
             # self.clf = self.readCLFandPCA()
+            #TODO UNCOMMENT BELOW
             print("predicting")
             self.predictPresence(testPres)
             self.predictPresence(testNotPres)
             i+=1
-        path = os.path.join(self.package_dir, 'GLCM.txt')
-        with open(path, 'w') as f:
-            f.write('dists\n')
-            for key in self.dists:
-                f.write('%s %s\n' % (key, self.dists[key]))      
+        scoredDists = self.scoreDists()
+        for elem in scoredDists: print(elem, scoredDists[elem])
+        path = os.path.join(self.package_dir, 'CTest.txt')
+        with open(path, 'a') as f:
+            f.write('C = {} RBF\n'.format(self.C))
+            for elem in scoredDists: f.write(str(elem) + str(scoredDists[elem]) + '\n')    
         
     def normalizeArr(self, values, min = None, max = None):
         vals = np.array(values, copy=True, dtype=np.float)
@@ -311,11 +409,12 @@ class FabricDetector:
         self.package_dir = os.path.dirname(os.path.abspath(__file__))
         trainPresImgs = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
         trainNotPresImgs = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
-
-        # self.focusImages(trainPresImgs)
-        # self.focusImages(trainNotPresImgs)
-
-        self.kfold_present(trainPresImgs,trainNotPresImgs)
+        # self.features = load('features.pickle')
+        self.pickleFeatures(np.concatenate((trainPresImgs, trainNotPresImgs)))
+        # for C in [5e3, 1e4, 5e4, 1e5, 5e5, 1e6]:
+        #     self.C = C
+        #     print(C)
+        self.kfold(trainPresImgs,trainNotPresImgs)
         print('kfold time: ', datetime.now() - start)
         return
         testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
@@ -325,8 +424,6 @@ class FabricDetector:
 
         self.writeHOGsToFile(testPresImgs)
         return
-        # testPresImgs = self.focusImages(testPresImgs)
-        # testNotPresImgs = self.focusImages(testNotPresImgs)
         self.getSVM_CLF(testPresImgs, testNotPresImgs)
 
         return

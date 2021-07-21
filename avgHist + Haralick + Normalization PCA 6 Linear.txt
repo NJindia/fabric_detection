@@ -1,4 +1,8 @@
-dists
+[black (1).png, black (10).png, black (2).png, black (3).png, black (4).png, black (5).png, black (6).png, black (7).png, black (8).png, black (9).png]
+[not_present (1).png, not_present (10).png, not_present (11).png, not_present (12).png, not_present (13).png, not_present (14).png, not_present (15).png]
+making clfs 2021-07-16 21:12:58.137249
+make CLF time: 0:04:34.159312
+predicting
 black (1).png [1.53952771]
 black (10).png [1.52540357]
 black (2).png [1.49360365]
@@ -16,6 +20,11 @@ not_present (12).png [-1.99904793]
 not_present (13).png [1.45846849]
 not_present (14).png [-1.5650512]
 not_present (15).png [-1.69285274]
+[blue (1).png, blue (2).png, blue (3).png, blue (4).png, blue (5).png, blue (6).png, blue (7).png, blue (8).png, blue (9).png]
+[not_present (16).png, not_present (17).png, not_present (18).png, not_present (19).png, not_present (2).png, not_present (20).png, not_present (21).png]
+making clfs 2021-07-16 21:17:38.097965
+make CLF time: 0:04:35.777578
+predicting
 blue (1).png [1.47561574]
 blue (2).png [1.47249589]
 blue (3).png [1.57210702]
@@ -32,6 +41,11 @@ not_present (19).png [-1.53397225]
 not_present (2).png [-1.48698226]
 not_present (20).png [-1.48385796]
 not_present (21).png [-0.99981441]
+[dark_blue (1).png, dark_blue (10).png, dark_blue (11).png, dark_blue (2).png, dark_blue (3).png, dark_blue (4).png, dark_blue (5).png, dark_blue (6).png, dark_blue (7).png, dark_blue (8).png, dark_blue (9).png] 
+[not_present (22).png, not_present (23).png, not_present (24).png, not_present (25).png, not_present (26).png, not_present (27).png, not_present (28).png]
+making clfs 2021-07-16 21:22:19.012987
+make CLF time: 0:04:36.469981
+predicting
 dark_blue (1).png [1.68766376]
 dark_blue (10).png [1.68311093]
 dark_blue (11).png [1.69369175]
@@ -50,6 +64,11 @@ not_present (25).png [-1.52302615]
 not_present (26).png [-1.46995554]
 not_present (27).png [-1.70632817]
 not_present (28).png [-1.68072811]
+[dark_gray (1).png, dark_gray (10).png, dark_gray (2).png, dark_gray (3).png, dark_gray (4).png, dark_gray (5).png, dark_gray (6).png, dark_gray (7).png, dark_gray (8).png, dark_gray (9).png]
+[not_present (29).png, not_present (3).png, not_present (30).png, not_present (31).png, not_present (32).png, not_present (33).png, not_present (34).png]
+making clfs 2021-07-16 21:27:01.421560
+make CLF time: 0:04:31.527661
+predicting
 dark_gray (1).png [0.97994218]
 dark_gray (10).png [1.00942572]
 dark_gray (2).png [1.09970451]
@@ -67,6 +86,11 @@ not_present (31).png [1.44020416]
 not_present (32).png [1.52986377]
 not_present (33).png [1.52420906]
 not_present (34).png [1.51149193]
+[dark_gray2 (1).png, dark_gray2 (2).png, dark_gray2 (3).png, dark_gray2 (4).png, dark_gray2 (5).png, dark_gray2 (6).png, dark_gray2 (7).png, dark_gray2 (8).png, dark_gray2 (9).png]
+[not_present (35).png, not_present (36).png, not_present (37).png, not_present (38).png, not_present (39).png, not_present (4).png, not_present (40).png]
+making clfs 2021-07-16 21:31:38.652233
+make CLF time: 0:04:47.382316
+predicting
 dark_gray2 (1).png [1.12276504]
 dark_gray2 (2).png [1.14937522]
 dark_gray2 (3).png [1.14048739]
@@ -83,6 +107,11 @@ not_present (38).png [-1.41433502]
 not_present (39).png [-0.99970619]
 not_present (4).png [-1.2234457]
 not_present (40).png [-0.99984806]
+[light_gray (1).png, light_gray (10).png, light_gray (2).png, light_gray (3).png, light_gray (4).png, light_gray (5).png, light_gray (6).png, light_gray (7).png, light_gray (8).png, light_gray (9).png]
+[not_present (41).png, not_present (42).png, not_present (43).png, not_present (44).png, not_present (45).png, not_present (46).png, not_present (47).png]
+making clfs 2021-07-16 21:36:31.334078
+make CLF time: 0:04:31.350650
+predicting
 light_gray (1).png [1.08929598]
 light_gray (10).png [1.06750453]
 light_gray (2).png [1.18913859]
@@ -100,6 +129,11 @@ not_present (44).png [-1.14715032]
 not_present (45).png [-1.04746104]
 not_present (46).png [-1.03658173]
 not_present (47).png [-1.04406847]
+[purple (1).png, purple (10).png, purple (2).png, purple (3).png, purple (4).png, purple (5).png, purple (6).png, purple (7).png, purple (8).png, purple (9).png]
+[not_present (48).png, not_present (49).png, not_present (5).png, not_present (50).png, not_present (51).png, not_present (52).png, not_present (53).png]
+making clfs 2021-07-16 21:41:08.344639
+make CLF time: 0:08:00.841402
+predicting
 purple (1).png [1.56064349]
 purple (10).png [1.55495691]
 purple (2).png [1.56157222]
@@ -117,6 +151,11 @@ not_present (50).png [-0.96636256]
 not_present (51).png [-1.02857669]
 not_present (52).png [-1.11123983]
 not_present (53).png [-1.1124491]
+[white (1).png, white (10).png, white (100).png, white (11).png, white (12).png, white (13).png, white (14).png, white (15).png, white (16).png, white (17).png, white (18).png, white (19).png, white (2).png, white (20).png, white (21).png, white (22).png, white (23).png, white (24).png, white (25).png, white (26).png, white (27).png, white (28).png, white (29).png, white (3).png, white (30).png, white (31).png, white (32).png, white (33).png, white (34).png, white (35).png, white (36).png, white (37).png, white (38).png, white (39).png, white (4).png, white (40).png, white (41).png, white (42).png, white (43).png, white (44).png, white (45).png, white (46).png, white (47).png, white (48).png, white (49).png, white (5).png, white (50).png, white (51).png, white (52).png, white (53).png, white (54).png, white (55).png, white (56).png, white (57).png, white (58).png, white (59).png, white (6).png, white (60).png, white (61).png, white (62).png, white (63).png, white (64).png, white (65).png, white (66).png, white (67).png, white (68).png, white (69).png, white (7).png, white (70).png, white (71).png, white (72).png, white (73).png, white (74).png, white (75).png, white (76).png, white (77).png, white (78).png, white (79).png, white (8).png, white (80).png, white (81).png, white (82).png, white (83).png, white (84).png, white (85).png, white (86).png, white (87).png, white (88).png, white (89).png, white (9).png, white (90).png, white (91).png, white (92).png, white (93).png, white (94).png, white (95).png, white (96).png, white (97).png, white (98).png, white (99).png]
+[not_present (54).png, not_present (55).png, not_present (56).png, not_present (6).png, not_present (7).png, not_present (8).png, not_present (9).png]
+making clfs 2021-07-16 21:49:14.639817
+make CLF time: 0:04:32.275972
+predicting
 white (1).png [1.38343989]
 white (10).png [1.40078752]
 white (100).png [1.46651114]
@@ -217,13 +256,18 @@ white (96).png [1.44388025]
 white (97).png [1.45503228]
 white (98).png [1.43669504]
 white (99).png [1.46235742]
-not_present (54).png [-1.64538518]
-not_present (55).png [-1.0646956]
-not_present (56).png [-0.90182345]
-not_present (6).png [-1.24389135]
-not_present (7).png [-1.16094792]
-not_present (8).png [-1.42237132]
-not_present (9).png [-1.35905805]
+not_present (54).png [-1.64551236]
+not_present (55).png [-1.06514091]
+not_present (56).png [-0.90212396]
+not_present (6).png [-1.24406887]
+not_present (7).png [-1.16103642]
+not_present (8).png [-1.42243475]
+not_present (9).png [-1.35910862]
+[yellow (1).png, yellow (10).png, yellow (2).png, yellow (3).png, yellow (4).png, yellow (5).png, yellow (6).png, yellow (7).png, yellow (8).png, yellow (9).png]
+[not_present (54).png, not_present (55).png, not_present (56).png, not_present (6).png, not_present (7).png, not_present (8).png, not_present (9).png]
+making clfs 2021-07-16 21:54:24.284395
+make CLF time: 0:04:28.450499
+predicting
 yellow (1).png [1.42171878]
 yellow (10).png [1.40576561]
 yellow (2).png [1.420585]
@@ -234,3 +278,11 @@ yellow (6).png [1.67185438]
 yellow (7).png [1.70013581]
 yellow (8).png [1.67354693]
 yellow (9).png [1.67645702]
+not_present (54).png [-1.64538518]
+not_present (55).png [-1.0646956]
+not_present (56).png [-0.90182345]
+not_present (6).png [-1.24389135]
+not_present (7).png [-1.16094792]
+not_present (8).png [-1.42237132]
+not_present (9).png [-1.35905805]
+kfold time:  1:14:03.200167
