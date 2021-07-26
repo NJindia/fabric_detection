@@ -16,7 +16,7 @@ from sklearn.model_selection import GridSearchCV
 from joblib import load, dump
 import mahotas as mt
 from datetime import datetime
-
+import plot_equalize
 
 class Image:
     def __init__(self, img=None, fileName=None, path=None):
@@ -190,23 +190,23 @@ class FabricDetector:
             rotations = self.getRotations(image.img)
             for i in range(len(rotations)):
                 rotation = rotations[i]
-                rotationEq = np.array(exposure.equalize_adapthist(cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY), clip_limit=1), dtype=np.float)
-                cv2.imshow('eq', rotationEq)
-                cv2.waitKey(0)
+                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
+                rotationEq = exposure.equalize_adapthist(grey, clip_limit=0.5)
                 hists = []
                 split = self.splitImg(rotationEq)
                 for img in split:
                     hist = self.getHOG(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-                try:
-                    rotation.shape[2]
-                    grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
-                except: grey = rotation
-                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
+                # try:
+                #     rotation.shape[2]
+                #     grey = cv2.cvtColor(rotationEq, cv2.COLOR_BGR2GRAY)
+                # except: grey = rotationEq
+                grey2 = np.uint8(255*rotationEq)
+                gcm = greycomatrix(grey2, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
                     levels=256)
                 glcm = greycoprops(gcm, prop='dissimilarity')[0]
-                haralick = self.extractHaralickFeats(grey)
+                haralick = self.extractHaralickFeats(grey2)
                 index = str(image.fileName) + str(i)
                 feats[index] = [avgHist, glcm, haralick]
         self.features = feats
@@ -245,19 +245,18 @@ class FabricDetector:
         avgHistsNormal = np.array(avgHistsNormal)
         haralickFeatsNormal = np.array(haralickFeatsNormal)
         GLCMsNormal = np.array(GLCMsNormal)
-        for i in range(len(avgHistsNormal)):
-            X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
-        # X = avgHistsNormal
+        # for i in range(len(avgHistsNormal)):
+        #     X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i], haralickFeatsNormal[i])))
+        X = avgHistsNormal
         X = np.array(X)
         # self.eigen(X)
-
         if(X == [] or y == []): return
         self.pca = PCA(n_components=6)
         X_PCA = self.pca.fit_transform(X)
         X_PCA = np.array(X_PCA)
-        self.gridSearch(X_PCA, y)
-        return
-        self.clf = SVC(kernel='poly', C=10)
+        # self.gridSearch(X, y)
+        # return
+        self.clf = SVC(kernel='poly', C=10) #TODO MODIFY
         self.clf.fit(X_PCA, y)
         print('make CLF time: ' + str(time() - t0))
         dump(self.clf, 'clf.pk1')
@@ -269,11 +268,12 @@ class FabricDetector:
         print('GridSearch Start{}'.format(datetime.now()))
         #Create a dictionary of possible parameters
         param_grid = {'C': [1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1e0, 1e1, 1e2, 1e3, 5e3, 1e4, 5e4, 1e5],
-                        'kernel':['rbf', 'poly', 'sigmoid']
+                        'kernel':['rbf', 'poly'],
+                        'gamma':[1e-1, 1e-2, 1e-3, 1e-4]
                     }
         #Create the GridSearchCV object
         # grid_clf = GridSearchCV(LinearSVC(random_state=0, class_weight='balanced'), param_grid, n_jobs=1, verbose=3)
-        grid_clf = GridSearchCV(SVC(class_weight='balanced'), param_grid, n_jobs=1, cv=10, verbose=1)
+        grid_clf = GridSearchCV(SVC(class_weight='balanced'), param_grid, n_jobs=1, cv=10, verbose=2)
         
         #Fit the data with the best possible parameters
         grid_clf = grid_clf.fit(X_train, y_train)
@@ -348,7 +348,7 @@ class FabricDetector:
         while(i < len(notPres)):
             j = 0
             npImageSet = []
-            while(j<= 6):
+            while(j<= 6 and i < len(notPres)):
                 npImageSet.append(notPres[i])
                 j+=1
                 i+=1
@@ -369,9 +369,8 @@ class FabricDetector:
             time = datetime.now()
             print('making clfs '+ str(time))
             self.makeCLFandPCA(trainPres, trainNotPres)
-            return #TODO DELETE
+            # return #TODO DELETE
             # self.clf = self.readCLFandPCA()
-            #TODO UNCOMMENT BELOW
             print("predicting")
             self.predictPresence(testPres)
             self.predictPresence(testNotPres)
@@ -409,8 +408,13 @@ class FabricDetector:
         self.package_dir = os.path.dirname(os.path.abspath(__file__))
         trainPresImgs = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
         trainNotPresImgs = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
-        # self.features = load('features.pickle')
-        self.pickleFeatures(np.concatenate((trainPresImgs, trainNotPresImgs)))
+        self.features = load('featuresEq.pickle')
+        # for image in trainNotPresImgs:
+        #     roi = self.getROI(image.img)
+        #     grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        #     plot_equalize.main(grey)
+        # self.pickleFeatures(np.concatenate((trainPresImgs, trainNotPresImgs)))
+        # return
         # for C in [5e3, 1e4, 5e4, 1e5, 5e5, 1e6]:
         #     self.C = C
         #     print(C)
