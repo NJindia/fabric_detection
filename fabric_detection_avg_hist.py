@@ -257,7 +257,7 @@ class FabricDetector:
         X_PCA = np.array(X_PCA)
         # self.gridSearch(X, y)
         # return
-        self.clf = SVC(kernel='poly', C=1000.0, gamma=0.1) #TODO MODIFY
+        self.clf = SVC(kernel='poly', C=1000.0, gamma=0.1, class_weight='balanced') #TODO MODIFY
         self.clf.fit(X_PCA, y)
         print('make CLF time: ' + str(time() - t0))
         dump(self.clf, 'clf.pk1')
