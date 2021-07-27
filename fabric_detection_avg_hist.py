@@ -1,13 +1,22 @@
+
+import pickle
+from sys import path
 import cv2
+from time import time
+from mahotas import features
 import numpy as np
 import os
 from matplotlib import pyplot as plt
+from numpy.lib.polynomial import poly
+from skimage import feature, exposure
 from skimage.feature import hog, greycoprops, greycomatrix
-from sklearn import svm
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC, LinearSVC
 from sklearn.decomposition import PCA
+from sklearn.model_selection import GridSearchCV
 from joblib import load, dump
+import mahotas as mt
 from datetime import datetime
-
 
 class Image:
     def __init__(self, img=None, fileName=None, path=None):
@@ -31,10 +40,6 @@ class FabricDetector:
                 # imgEq = self.shiftHist(roi)
                 imgEq = roi
                 image = Image(img=imgEq, fileName=f, path=path)
-                # acutance = self.getAcutance(image)
-                # print('OG: ', f, acutance)
-                # acutance = self.getAcutance(imgEq)
-                # print('SHIFT: ', f, acutance)
                 imgs.append(image)
         return imgs
 
@@ -97,24 +102,34 @@ class FabricDetector:
         # cv2.destroyAllWindows()
         return final
         
+    def get_GLCM_features(self, grey):
+        greyInt = np.uint8(255*grey)
+        gcm = greycomatrix(greyInt, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4], levels=256)
+        glcm = greycoprops(gcm, prop='dissimilarity')[0]
+        return glcm
+    
+    def equalize_hist(self, img, clip_limit=.5):
+        grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        greyEq = exposure.equalize_adapthist(grey, clip_limit=clip_limit)
+        return greyEq
+
     def predictPresence(self, images):
         predictions = []
         for image in images:
             pred = 0
             hists = []
             roi = self.getROI(image.img)
-            split = self.splitImg(roi)            
+            greyEq = self.equalize_hist(roi)
+            split = self.splitImg(greyEq)            
             for img in split:
                 hist = self.getHOG(img)
                 hists.append(hist)
             avgHist = self.getAvgHist(hists)
-            # grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-            # gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],levels=256)
-            # gcp = greycoprops(gcm, prop='dissimilarity')[0]
-            # gcpNormalized = self.normalizeArr(gcp, min=self.GLCMmin, max = self.GLCMmax)
+            glcm = self.get_GLCM_features(greyEq)
+            glmNormalized = self.normalizeArr(glcm, min=self.GLCMmin, max = self.GLCMmax)
             avgHistNormalized = self.normalizeArr(avgHist, min=self.HOGmin, max=self.HOGmax)
-            # trainArr = np.concatenate((avgHistNormalized, gcpNormalized))
-            trainArr = avgHistNormalized
+            trainArr = np.concatenate((avgHistNormalized, gcpNormalized))
+            # trainArr = avgHistNormalized
             # trainArr = gcpNormalized
             
             PCA = self.pca.transform(trainArr.reshape(1, -1))
@@ -133,32 +148,26 @@ class FabricDetector:
         for image in present:
             rotations = self.getRotations(image.img)
             for rotation in rotations:
+                greyEq = self.equalize_hist(rotation)
                 hists = []
-                split = self.splitImg(rotation)
+                split = self.splitImg(greyEq)
                 for img in split:
                     hist = self.getHOG(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-
-                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
-                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
-                    levels=256)
-                glcm = greycoprops(gcm, prop='dissimilarity')[0]
+                glcm = self.get_GLCM_features(greyEq)
                 trainData.append([avgHist, glcm, 1])
         for image in notPresent:
             rotations = self.getRotations(image.img)
             for rotation in rotations:
+                greyEq = self.equalize_hist(rotation)
                 hists = []
-                split = self.splitImg(rotation)
+                split = self.splitImg(greyEq)
                 for img in split:
                     hist = self.getHOG(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-
-                grey = cv2.cvtColor(rotation, cv2.COLOR_BGR2GRAY)
-                gcm = greycomatrix(grey, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4],
-                    levels=256)
-                glcm = greycoprops(gcm, prop='dissimilarity')[0]
+                glcm = self.get_GLCM_features(greyEq)
                 trainData.append([avgHist, glcm, 0])
         
         avgHists = []
@@ -169,17 +178,17 @@ class FabricDetector:
             GLCMs.append(trainData[i][1])
             y.append(trainData[i][2])
         avgHistsNormal, self.HOGmin, self.HOGmax = self.normalizeArr(avgHists)
-        # GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
+        GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
         X = []
         avgHistsNormal = np.array(avgHistsNormal)
-        # GLCMsNormal = np.array(GLCMsNormal)
-        # for i in range(len(avgHistsNormal)):
-        #     X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
-        X = avgHistsNormal
+        GLCMsNormal = np.array(GLCMsNormal)
+        for i in range(len(avgHistsNormal)):
+            X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
+        # X = avgHistsNormal
 
-        self.clf = svm.SVC()
+        self.clf = SVC(C=1000, gamma=.1, kernel='poly', class_weight='balanced')
         if(X == [] or y == []): return
-        self.pca = PCA(3)
+        self.pca = PCA(6)
         X_PCA = self.pca.fit_transform(X)
         X_PCA = np.array(X_PCA)
         self.clf.fit(X_PCA, y)
