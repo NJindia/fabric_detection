@@ -13,7 +13,7 @@ from skimage.feature import hog, greycoprops, greycomatrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC, LinearSVC
 from sklearn.decomposition import PCA
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, cross_validate
 from joblib import load, dump
 import mahotas as mt
 from datetime import datetime
@@ -128,7 +128,7 @@ class FabricDetector:
             glcm = self.get_GLCM_features(greyEq)
             glmNormalized = self.normalizeArr(glcm, min=self.GLCMmin, max = self.GLCMmax)
             avgHistNormalized = self.normalizeArr(avgHist, min=self.HOGmin, max=self.HOGmax)
-            trainArr = np.concatenate((avgHistNormalized, gcpNormalized))
+            trainArr = np.concatenate((avgHistNormalized, glmNormalized))
             # trainArr = avgHistNormalized
             # trainArr = gcpNormalized
             
@@ -272,6 +272,70 @@ class FabricDetector:
         average = np.divide(sum, divisor)
         return average
 
+    def cross_validate(self, present, not_present):
+        start = datetime.now()
+        trainData = []
+        for image in present:
+            print(image.fileName)
+            rotations = self.getRotations(image.img)
+            for rotation in rotations:
+                greyEq = self.equalize_hist(rotation)
+                hists = []
+                split = self.splitImg(greyEq)
+                for img in split:
+                    hist = self.getHOG(img)
+                    hists.append(hist)
+                avgHist = self.getAvgHist(hists)
+                glcm = self.get_GLCM_features(greyEq)
+                trainData.append([avgHist, glcm, 1])
+            cv2.imshow(image.fileName, greyEq)
+            cv2.waitKey(0)
+        for image in not_present:
+            print(image.fileName)
+            rotations = self.getRotations(image.img)
+            for rotation in rotations:
+                greyEq = self.equalize_hist(rotation)
+                hists = []
+                split = self.splitImg(greyEq)
+                for img in split:
+                    hist = self.getHOG(img)
+                    hists.append(hist)
+                avgHist = self.getAvgHist(hists)
+                glcm = self.get_GLCM_features(greyEq)
+                trainData.append([avgHist, glcm, 0])
+            cv2.imshow(image.fileName, greyEq)
+            cv2.waitKey(0)
+
+        
+        avgHists = []
+        GLCMs = []
+        y = []
+        for i in range(len(trainData)):
+            avgHists.append(trainData[i][0])
+            GLCMs.append(trainData[i][1])
+            y.append(trainData[i][2])
+        avgHistsNormal, self.HOGmin, self.HOGmax = self.normalizeArr(avgHists)
+        GLCMsNormal, self.GLCMmin, self.GLCMmax = self.normalizeArr(GLCMs)
+        X = []
+        avgHistsNormal = np.array(avgHistsNormal)
+        GLCMsNormal = np.array(GLCMsNormal)
+        for i in range(len(avgHistsNormal)):
+            X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
+        if(X == [] or y == []): return
+        self.pca = PCA(6)
+        X_PCA = self.pca.fit_transform(X)
+        X_PCA = np.array(X_PCA)
+        clf = SVC(C=1000, gamma=.1, kernel='poly', class_weight='balanced')
+        print('validating')
+        scores = cross_validate(clf, X, y, scoring='accuracy', cv=5, verbose=3, n_jobs=-1)
+        print('done in {}s'.format(scores['fit_time']))
+        print(scores['test_score'])
+        # self.clf.fit(X_PCA, y)
+        getCLFTime = datetime.now()
+        print('make CLF time: ' + str(getCLFTime - start))
+        dump(self.clf, 'clf.pk1')
+        dump(self.pca, 'pca.pk1')
+
     def __init__(self):
         # np.set_printoptions(threshold=sys.maxsize)
         start = datetime.now()
@@ -282,8 +346,8 @@ class FabricDetector:
 
         # self.focusImages(trainPresImgs)
         # self.focusImages(trainNotPresImgs)
-
-        self.kfold_present(trainPresImgs,trainNotPresImgs)
+        self.cross_validate(trainPresImgs, trainNotPresImgs)
+        # self.kfold_present(trainPresImgs,trainNotPresImgs)
         print('kfold time: ', datetime.now() - start)
         return
         testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
