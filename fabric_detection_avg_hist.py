@@ -125,8 +125,9 @@ class FabricDetector:
             # gcpNormalized = self.normalizeArr(gcp, min=self.GLCMmin, max = self.GLCMmax)
             haralickNormalized = self.normalizeArr(haralick, min=self.haralickMin, max = self.haralickMax)
             avgHistNormalized = self.normalizeArr(avgHist, min=self.HOGmin, max=self.HOGmax)
-            # predArr = np.concatenate((avgHistNormalized, haralickNormalized))
-            predArr = avgHistNormalized
+            GLCM_normalized = self.normalizeArr(glcm, min=self.GLCMmin, max=self.GLCMmax)
+            predArr = np.concatenate((avgHistNormalized, GLCM_normalized)) #MODIFY
+            # predArr = avgHistNormalized
             predArr = predArr.reshape(1, -1)
 
             PCA = self.pca.transform(predArr)
@@ -245,9 +246,9 @@ class FabricDetector:
         avgHistsNormal = np.array(avgHistsNormal)
         haralickFeatsNormal = np.array(haralickFeatsNormal)
         GLCMsNormal = np.array(GLCMsNormal)
-        # for i in range(len(avgHistsNormal)):
-        #     X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i], haralickFeatsNormal[i])))
-        X = avgHistsNormal
+        for i in range(len(avgHistsNormal)):
+            X.append(np.concatenate((avgHistsNormal[i], GLCMsNormal[i])))
+        # X = avgHistsNormal
         X = np.array(X)
         # self.eigen(X)
         if(X == [] or y == []): return
@@ -256,7 +257,7 @@ class FabricDetector:
         X_PCA = np.array(X_PCA)
         # self.gridSearch(X, y)
         # return
-        self.clf = SVC(kernel='poly', C=10) #TODO MODIFY
+        self.clf = SVC(kernel='poly', C=1000.0, gamma=0.1) #TODO MODIFY
         self.clf.fit(X_PCA, y)
         print('make CLF time: ' + str(time() - t0))
         dump(self.clf, 'clf.pk1')
@@ -271,13 +272,12 @@ class FabricDetector:
                         'kernel':['rbf', 'poly'],
                         'gamma':[1e-1, 1e-2, 1e-3, 1e-4]
                     }
+        lin_grid = {'C': [1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1e0, 1e1, 1e2, 1e3, 5e3, 1e4, 5e4, 1e5]}
         #Create the GridSearchCV object
         # grid_clf = GridSearchCV(LinearSVC(random_state=0, class_weight='balanced'), param_grid, n_jobs=1, verbose=3)
-        grid_clf = GridSearchCV(SVC(class_weight='balanced'), param_grid, n_jobs=1, cv=10, verbose=2)
-        
+        grid_clf = GridSearchCV(SVC(class_weight='balanced'), param_grid, n_jobs=-1, cv=10, verbose=2)
         #Fit the data with the best possible parameters
         grid_clf = grid_clf.fit(X_train, y_train)
-
         #Print the best estimator with it's parameters
         s1 = "done in %0.3fs" % (time() - t0)
         s2 = 'best estimators: '
@@ -291,13 +291,6 @@ class FabricDetector:
         print(s5)
         for i in range(len(grid_clf.cv_results_['params'])):
             print('{}: {} {}'.format(i, grid_clf.cv_results_['params'][i], grid_clf.cv_results_['mean_test_score'][i]))
-        path = os.path.join(self.package_dir, 'gridSearchResults.txt')
-        with open(path, 'a') as f:
-            f.write(
-                '{}\n{}\n{}\n{}\n{}\n'.format(s1, s2, s3, s4, s5)
-            )
-            for i in range(len(grid_clf.cv_results_['params'])):
-                f.write('{}: {} {}\n'.format(i, grid_clf.cv_results_['params'][i], grid_clf.cv_results_['mean_test_score'][i]))
 
     def extractHaralickFeats(self, img):
         # calculate haralick texture features for 4 types of adjacency
