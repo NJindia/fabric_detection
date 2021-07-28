@@ -255,9 +255,9 @@ class FabricDetector:
         self.pca = PCA(n_components=6)
         X_PCA = self.pca.fit_transform(X)
         X_PCA = np.array(X_PCA)
-        # self.gridSearch(X, y)
-        # return
-        self.clf = SVC(kernel='poly', C=1000.0, gamma=0.1, class_weight='balanced') #TODO MODIFY
+        self.gridSearch(X_PCA, y)
+        return
+        self.clf = SVC(kernel='rbf', C=1000.0, gamma=0.1, class_weight='balanced') #TODO MODIFY
         self.clf.fit(X_PCA, y)
         print('make CLF time: ' + str(time() - t0))
         dump(self.clf, 'clf.pk1')
@@ -351,8 +351,8 @@ class FabricDetector:
         i=0
         while(i < len(colors) and i < len(notPresArr)):
             testPres = colors[i]
-            # trainP2D = colors[:i] + colors[i+1:]
-            trainP2D = colors #TODO DELETE
+            trainP2D = colors[:i] + colors[i+1:]
+            # trainP2D = colors #TODO DELETE
             trainPres = [item for sublist in trainP2D for item in sublist]
             testNotPres = notPresArr[i]
             trainNP2D = notPresArr[:i] + notPresArr[i+1:]
