@@ -275,21 +275,21 @@ class FabricDetector:
     def cross_validate(self, present, not_present):
         start = datetime.now()
         trainData = []
-        for image in present:
-            print(image.fileName)
-            rotations = self.getRotations(image.img)
-            for rotation in rotations:
-                greyEq = self.equalize_hist(rotation)
-                hists = []
-                split = self.splitImg(greyEq)
-                for img in split:
-                    hist = self.getHOG(img)
-                    hists.append(hist)
-                avgHist = self.getAvgHist(hists)
-                glcm = self.get_GLCM_features(greyEq)
-                trainData.append([avgHist, glcm, 1])
-            cv2.imshow(image.fileName, greyEq)
-            cv2.waitKey(0)
+        # for image in present:
+        #     print(image.fileName)
+        #     rotations = self.getRotations(image.img)
+        #     for rotation in rotations:
+        #         greyEq = self.equalize_hist(rotation)
+        #         hists = []
+        #         split = self.splitImg(greyEq)
+        #         for img in split:
+        #             hist = self.getHOG(img)
+        #             hists.append(hist)
+        #         avgHist = self.getAvgHist(hists)
+        #         glcm = self.get_GLCM_features(greyEq)
+        #         trainData.append([avgHist, glcm, 1])
+        #     cv2.imshow(image.fileName, greyEq)
+        #     cv2.waitKey(0)
         for image in not_present:
             print(image.fileName)
             rotations = self.getRotations(image.img)
