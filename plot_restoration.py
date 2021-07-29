@@ -26,7 +26,7 @@ the noise power and the image frequency power.
 .. [1] François Orieux, Jean-François Giovannelli, and Thomas
        Rodet, "Bayesian estimation of regularization and point
        spread function parameters for Wiener-Hunt deconvolution",
-       J. Opt. Soc. Am. A 27, 1593-1607 (2010)
+`       J. Opt. Soc. Am. A 27, 1593-1607 (2010)
 """
 import os
 import numpy as np
@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 from skimage import color, data, restoration
 from scipy.signal import convolve2d as conv2
 
-img = color.rgb2gray(plt.imread(os.path.join("D:\\Documents\\fabric_detection\\images\\SVM_training_present\\black (1).png")))
+img = color.rgb2gray(plt.imread(os.path.join("D:\\Documents\\fabric_detection\\images\\SVM_training_not_present\\not_present (13).png")))
 psf = np.ones((5, 5)) / 25
 # img = conv2(img, psf, 'same')
 # img += 0.1 * img.std() * np.random.standard_normal(img.shape)
