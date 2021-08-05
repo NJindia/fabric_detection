@@ -18,36 +18,37 @@ from joblib import load, dump
 import mahotas as mt
 from datetime import datetime
 
+## Simple class to pair image data to filename and path
 class Image:
-    def __init__(self, img=None, fileName=None, path=None):
+    def __init__(self, img=None, filename=None, path=None):
         self.img = img
-        self.fileName = fileName
+        self.filename = filename
         self.path = path
 
     def __str__(self):
-        return self.fileName
+        return self.filename
     def __repr__(self):
-        return self.fileName
+        return self.filename
 
-class FabricDetector:    
-    def getImages(self, parent_folder_path):
+class FabricDetector:  
+    # Gets any images from the   
+    def get_images(self, parent_folder_path):
         imgs = []
         for f in os.listdir(parent_folder_path):
             if os.path.isfile(os.path.join(parent_folder_path, f)):
                 path = os.path.join(parent_folder_path, f)
                 img = cv2.imread(path)
                 roi = img[0:1544,374:1918]
-                # imgEq = self.shiftHist(roi)
-                imgEq = roi
-                image = Image(img=imgEq, fileName=f, path=path)
+                img_eq = roi
+                image = Image(img=img_eq, filename=f, path=path)
                 imgs.append(image)
         return imgs
 
-    def getHOG(self, img):
+    def get_hog(self, img):
         hist = hog(img, orientations=36, pixels_per_cell=(100, 100), cells_per_block=(1, 1))
         return hist
 
-    def getROI(self, img):
+    def get_roi(self, img):
         center = (int(img.shape[1]/2), int(img.shape[0]/2)) #(x, y)
         x1 = center[0]-500
         x2 = center[0]+500
@@ -55,7 +56,7 @@ class FabricDetector:
         y2 = center[1]+500
         return img[y1:y2,x1:x2]
 
-    def splitImg(self, img):
+    def split_img(self, img):
         imgs = []
         shape = img.shape #(y, x)
         y = 0
@@ -69,105 +70,82 @@ class FabricDetector:
             x=0
         return imgs
 
-    def getRotations(self, img):
+    def get_rotations(self, img):
         rotations = []
         for i in range(0, 360, 15):
             image_center = tuple(np.array(img.shape[1::-1]) / 2)
             rot_mat = cv2.getRotationMatrix2D(image_center, i, 1.0)
             rotation = cv2.warpAffine(img, rot_mat, img.shape[1::-1], flags=cv2.INTER_LINEAR)
-            roi = self.getROI(rotation)
+            roi = self.get_roi(rotation)
             rotations.append(roi)
         return rotations
- 
-    def shiftHist(self, img):
-        # cv2.imshow('og', img)
-        start = datetime.now()
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        h, s, v = cv2.split(hsv)
-        h[:,: ] =  50
-        diff1 = 128 - cv2.mean(s)[0]
-        diff2 = 128 - cv2.mean(v)[0]
-        s = s + int(diff1)
-        v = v + int(diff2)
-        s[s>255] = 255
-        s[s<0] = 0
-        v[v>255] = 255
-        v[v<0] = 0
-        s=s.astype(np.uint8)
-        v=v.astype(np.uint8)
-        hsvNew = cv2.merge((h, s, v))
-        final = cv2.cvtColor(hsvNew, cv2.COLOR_HSV2BGR)
-        # cv2.imshow('final', final)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-        return final
         
-    def get_GLCM_features(self, grey):
-        greyInt = np.uint8(255*grey)
-        gcm = greycomatrix(greyInt, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4], levels=256)
+    def get_glcm_features(self, grey):
+        grey_int = np.uint8(255*grey)
+        gcm = greycomatrix(grey_int, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4], levels=256)
         glcm = greycoprops(gcm, prop='dissimilarity')[0]
         return glcm
     
     def equalize_hist(self, img, clip_limit=.5):
         grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        greyEq = exposure.equalize_adapthist(grey, clip_limit=clip_limit)
-        return greyEq
+        grey_eq = exposure.equalize_adapthist(grey, clip_limit=clip_limit)
+        return grey_eq
 
-    def predictPresence(self, images):
+    def predict_presence(self, images):
         predictions = []
         for image in images:
             pred = 0
             hists = []
-            roi = self.getROI(image.img)
-            greyEq = self.equalize_hist(roi)
-            split = self.splitImg(greyEq)            
+            roi = self.get_roi(image.img)
+            grey_eq = self.equalize_hist(roi)
+            split = self.split_img(grey_eq)            
             for img in split:
-                hist = self.getHOG(img)
+                hist = self.get_hog(img)
                 hists.append(hist)
             avgHist = self.getAvgHist(hists)
-            glcm = self.get_GLCM_features(greyEq)
-            glmNormalized = self.normalizeArr(glcm, min=self.GLCMmin, max = self.GLCMmax)
-            avgHistNormalized = self.normalizeArr(avgHist, min=self.HOGmin, max=self.HOGmax)
-            trainArr = np.concatenate((avgHistNormalized, glmNormalized))
+            glcm = self.get_glcm_features(grey_eq)
+            glm_normalized = self.normalizeArr(glcm, min=self.GLCMmin, max = self.GLCMmax)
+            avg_hist_normalized = self.normalizeArr(avgHist, min=self.HOGmin, max=self.HOGmax)
+            trainArr = np.concatenate((avg_hist_normalized, glm_normalized))
             # trainArr = avgHistNormalized
             # trainArr = gcpNormalized
             
-            PCA = self.pca.transform(trainArr.reshape(1, -1))
-            pred = self.clf.predict(PCA)
-            predictions.append([image.fileName, pred])
+            pca = self.pca.transform(trainArr.reshape(1, -1))
+            pred = self.clf.predict(pca)
+            predictions.append([image.filename, pred])
 
             #DEBUG
-            dist = self.clf.decision_function(PCA)
-            self.dists[image.fileName] = dist
-            print(image.fileName, dist)
+            dist = self.clf.decision_function(pca)
+            self.dists[image.filename] = dist
+            print(image.filename, dist)
         return predictions
 
-    def makeCLFandPCA(self, present, notPresent):
+    def make_clf_and_pca(self, present, notPresent):
         start = datetime.now()
         trainData = []
         for image in present:
-            rotations = self.getRotations(image.img)
+            rotations = self.get_rotations(image.img)
             for rotation in rotations:
                 greyEq = self.equalize_hist(rotation)
                 hists = []
-                split = self.splitImg(greyEq)
+                split = self.split_img(greyEq)
                 for img in split:
-                    hist = self.getHOG(img)
+                    hist = self.get_hog(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-                glcm = self.get_GLCM_features(greyEq)
+                glcm = self.get_glcm_features(greyEq)
                 trainData.append([avgHist, glcm, 1])
         for image in notPresent:
-            rotations = self.getRotations(image.img)
+            rotations = self.get_rotations(image.img)
             for rotation in rotations:
                 greyEq = self.equalize_hist(rotation)
                 hists = []
-                split = self.splitImg(greyEq)
+                split = self.split_img(greyEq)
                 for img in split:
-                    hist = self.getHOG(img)
+                    hist = self.get_hog(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-                glcm = self.get_GLCM_features(greyEq)
+                glcm = self.get_glcm_features(greyEq)
                 trainData.append([avgHist, glcm, 0])
         
         avgHists = []
@@ -197,7 +175,7 @@ class FabricDetector:
         dump(self.clf, 'clf.pk1')
         dump(self.pca, 'pca.pk1')
 
-    def readCLFandPCA(self):
+    def read_clf_and_pca(self):
         self.clf = load('clf.pk1')
         self.pca = load('pca.pk1')
 
@@ -211,9 +189,9 @@ class FabricDetector:
         # notPresImages = self.focusImages(notPresImages)
         i = 0
         while(i < len(presImages)):
-            color = presImages[i].fileName.split()[0]
+            color = presImages[i].filename.split()[0]
             colorArr = []
-            while(i < len(presImages) and presImages[i].fileName.split()[0] == color):
+            while(i < len(presImages) and presImages[i].filename.split()[0] == color):
                 colorArr.append(presImages[i])
                 i+=1
             colors.append(colorArr)
@@ -241,11 +219,11 @@ class FabricDetector:
             print(testNotPres)
             time = datetime.now()
             print('making clfs '+ str(time))
-            self.makeCLFandPCA(trainPres, trainNotPres)
+            self.make_clf_and_pca(trainPres, trainNotPres)
             # self.clf = self.readCLFandPCA()
             print("predicting")
-            self.predictPresence(testPres)
-            self.predictPresence(testNotPres)
+            self.predict_presence(testPres)
+            self.predict_presence(testNotPres)
             i+=1
         path = os.path.join(self.package_dir, 'GLCM.txt')
         with open(path, 'w') as f:
@@ -276,7 +254,7 @@ class FabricDetector:
         start = datetime.now()
         trainData = []
         # for image in present:
-        #     print(image.fileName)
+        #     print(image.filename)
         #     rotations = self.getRotations(image.img)
         #     for rotation in rotations:
         #         greyEq = self.equalize_hist(rotation)
@@ -288,22 +266,22 @@ class FabricDetector:
         #         avgHist = self.getAvgHist(hists)
         #         glcm = self.get_GLCM_features(greyEq)
         #         trainData.append([avgHist, glcm, 1])
-        #     cv2.imshow(image.fileName, greyEq)
+        #     cv2.imshow(image.filename, greyEq)
         #     cv2.waitKey(0)
         for image in not_present:
-            print(image.fileName)
-            rotations = self.getRotations(image.img)
+            print(image.filename)
+            rotations = self.get_rotations(image.img)
             for rotation in rotations:
                 greyEq = self.equalize_hist(rotation)
                 hists = []
-                split = self.splitImg(greyEq)
+                split = self.split_img(greyEq)
                 for img in split:
-                    hist = self.getHOG(img)
+                    hist = self.get_hog(img)
                     hists.append(hist)
                 avgHist = self.getAvgHist(hists)
-                glcm = self.get_GLCM_features(greyEq)
+                glcm = self.get_glcm_features(greyEq)
                 trainData.append([avgHist, glcm, 0])
-            cv2.imshow(image.fileName, greyEq)
+            cv2.imshow(image.filename, greyEq)
             cv2.waitKey(0)
 
         
@@ -341,44 +319,34 @@ class FabricDetector:
         start = datetime.now()
         self.dists = {}
         self.package_dir = os.path.dirname(os.path.abspath(__file__))
-        trainPresImgs = self.getImages(os.path.join(self.package_dir,'images/SVM_training_present'))
-        trainNotPresImgs = self.getImages(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
+        train_pres_imgs = self.get_images(os.path.join(self.package_dir,'images/SVM_training_present'))
+        train_not_pres_imgs = self.get_images(os.path.join(self.package_dir, 'images/SVM_training_not_present'))
 
-        # self.focusImages(trainPresImgs)
-        # self.focusImages(trainNotPresImgs)
-        self.cross_validate(trainPresImgs, trainNotPresImgs)
+        self.cross_validate(train_pres_imgs, train_not_pres_imgs)
         # self.kfold_present(trainPresImgs,trainNotPresImgs)
         print('kfold time: ', datetime.now() - start)
         return
-        testPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_present'))
-        testNotPresImgs = self.getImages(os.path.join(self.package_dir,'images\SVM_test_not_present'))
+        test_pres_imgs = self.get_images(os.path.join(self.package_dir,'images\SVM_test_present'))
+        test_not_pres_imgs = self.get_images(os.path.join(self.package_dir,'images\SVM_test_not_present'))
 
-        #1 = high acutance, 2 = low acutance
-
-        self.writeHOGsToFile(testPresImgs)
+        self.writeHOGsToFile(test_pres_imgs)
         return
-        # testPresImgs = self.focusImages(testPresImgs)
-        # testNotPresImgs = self.focusImages(testNotPresImgs)
-        self.getSVM_CLF(testPresImgs, testNotPresImgs)
-
+        self.getSVM_CLF(test_pres_imgs, test_not_pres_imgs)
         return
+
         newCLF = True
         if newCLF:
-            self.clf = self.makeCLF(trainPresImgs, trainNotPresImgs)
-            # self.clf1 = self.makeCLF(trainPres1, trainNotPresImgs)
-            # self.clf2 = self.makeCLF(trainPres2, trainNotPresImgs)
+            self.clf = self.make_clf_and_pca(train_pres_imgs, train_not_pres_imgs)
         else: 
-            clf = self.readCLF()
-        # np.savetxt('avgPresentHist.csv', avgPresentHist, fmt='%s', delimiter=',', header="value")
-        # np.savetxt('avgNotPresentHist.csv', avgNotPresentHist, fmt='%s', delimiter=',', header="value")    
+            clf = self.read_clf_and_pca()
         print("present")
-        for presImg in testPresImgs:
-            presPrediction = self.predictPresence(presImg)
-            print(presImg.fileName + ' present prediction: ' + str(presPrediction))
+        for present_img in test_pres_imgs:
+            present_prediction = self.predict_presence(present_img)
+            print(present_img.filename + ' present prediction: ' + str(present_prediction))
         print("not present")
-        for notPresImg in testNotPresImgs:
-            notPresPrediction = self.predictPresence(notPresImg)
-            print(notPresImg.fileName + ' not present prediction: ' + str(notPresPrediction))
+        for not_present_img in test_not_pres_imgs:
+            not_present_prediction = self.predict_presence(not_present_img)
+            print(not_present_img.filename + ' not present prediction: ' + str(not_present_prediction))
     
 
 
