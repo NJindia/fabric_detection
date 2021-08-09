@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "C:\\Users\\techn\\AppData\\Local\\Programs\\Python\\Python36\\python.exe"
+    "python.pythonPath": "C:\\Users\\techn\\AppData\\Local\\Programs\\Python\\Python36\\python.exe",
+    "restructuredtext.confPath": "${workspaceFolder}\\source"
 }
